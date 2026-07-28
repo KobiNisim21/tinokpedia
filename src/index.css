@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    direction: rtl;
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-stone-50 text-slate-800 font-assistant antialiased;
+    min-height: 100dvh;
+  }
+
+  .material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  }
+}
+
+@layer components {
+  .soft-shadow {
+    box-shadow: 0px 12px 12px rgba(30, 41, 59, 0.04);
+  }
+  .nav-shadow {
+    box-shadow: 0px -4px 12px rgba(30, 41, 59, 0.04);
+  }
+}
