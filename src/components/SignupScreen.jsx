@@ -1,6 +1,17 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import logo from "../assets/logo.png"
-import { eddFromInputs, parseInputDate } from "../utils/pregnancy"
+import {
+  eddFromInputs,
+  parseDdMmYyyy,
+  isoToDdMmYyyy,
+} from "../utils/pregnancy"
+
+/** Format raw digits into a dd/mm/yyyy mask as the user types. */
+function maskDate(raw) {
+  const digits = raw.replace(/\D/g, "").slice(0, 8) // ddmmyyyy
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)]
+  return parts.filter(Boolean).join("/")
+}
 
 /**
  * SignupScreen — מסך הרשמה
@@ -12,13 +23,31 @@ import { eddFromInputs, parseInputDate } from "../utils/pregnancy"
 export default function SignupScreen({ onComplete }) {
   const [name, setName] = useState("")
   const [method, setMethod] = useState("last_period") // "last_period" | "due_date"
-  const [dateValue, setDateValue] = useState("")
+  const [dateText, setDateText] = useState("") // day-first "dd/mm/yyyy"
+  const nativePickerRef = useRef(null)
 
   const dateLabel =
     method === "due_date" ? "תאריך לידה משוער" : "תאריך וסת אחרון"
 
-  const parsedDate = parseInputDate(dateValue)
+  const parsedDate = parseDdMmYyyy(dateText)
   const canSubmit = name.trim().length > 0 && parsedDate !== null
+
+  function handleDateTextChange(event) {
+    setDateText(maskDate(event.target.value))
+  }
+
+  // The calendar icon opens a hidden native date picker; its yyyy-mm-dd value
+  // is converted back into the visible dd/mm/yyyy field.
+  function handleNativePick(event) {
+    setDateText(isoToDdMmYyyy(event.target.value))
+  }
+
+  function openNativePicker() {
+    const el = nativePickerRef.current
+    if (!el) return
+    if (typeof el.showPicker === "function") el.showPicker()
+    else el.focus()
+  }
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -99,16 +128,36 @@ export default function SignupScreen({ onComplete }) {
                 {dateLabel}
               </label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-primary">
-                  calendar_month
-                </span>
+                <button
+                  type="button"
+                  onClick={openNativePicker}
+                  aria-label="פתחי לוח שנה"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-primary"
+                >
+                  <span className="material-symbols-outlined">calendar_month</span>
+                </button>
+
+                {/* Visible masked field — always shows the dd/mm/yyyy placeholder */}
                 <input
                   id="calcDate"
                   name="calcDate"
+                  type="text"
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={dateText}
+                  onChange={handleDateTextChange}
+                  placeholder="dd/mm/yyyy"
+                  className="w-full rounded-xl border-none bg-surface-container-low py-3 pl-4 pr-12 text-left font-assistant text-body-base text-on-background outline-none transition-shadow placeholder:text-outline focus:ring-2 focus:ring-primary-container"
+                />
+
+                {/* Hidden native picker, opened via the calendar icon */}
+                <input
+                  ref={nativePickerRef}
                   type="date"
-                  value={dateValue}
-                  onChange={(e) => setDateValue(e.target.value)}
-                  className="w-full appearance-none rounded-xl border-none bg-surface-container-low py-3 pl-4 pr-12 font-assistant text-body-base text-on-background outline-none transition-shadow focus:ring-2 focus:ring-primary-container"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  onChange={handleNativePick}
+                  className="pointer-events-none absolute bottom-0 right-6 h-0 w-0 opacity-0"
                 />
               </div>
             </div>
