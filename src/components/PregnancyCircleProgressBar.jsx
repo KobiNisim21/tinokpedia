@@ -52,12 +52,12 @@ export default function PregnancyCircleProgressBar({
         </svg>
 
         {/* Weekly illustration */}
-        <div className="relative z-10 flex h-56 w-56 items-center justify-center overflow-hidden rounded-full bg-stone-50">
+        <div className="relative z-10 flex h-56 w-56 items-center justify-center overflow-hidden rounded-full bg-transparent">
           {imageSrc ? (
             <img
               src={imageSrc}
               alt={imageAlt || `איור שבוע ${week}`}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               loading="lazy"
             />
           ) : (
