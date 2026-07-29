@@ -5,15 +5,15 @@ import DashboardContentAccordions from "./DashboardContentAccordions"
 import BottomNav from "./BottomNav"
 import { pregnancyStatus } from "../utils/pregnancy"
 
-// Auto-import available weekly illustrations (week1..weekN, .png/.PNG)
-const weekImages = import.meta.glob("../assets/illustrations/week*.{png,PNG}", {
+// Auto-import available weekly illustrations
+const weekImages = import.meta.glob("../assets/illustrations/**/*.{png,PNG}", {
   eager: true,
 })
 
 function getWeekImage(week) {
-  const key = Object.keys(weekImages).find((k) =>
-    k.toLowerCase().includes(`week${week}.png`),
-  )
+  const key = Object.keys(weekImages)
+    .sort((a, b) => a.length - b.length)
+    .find((k) => k.toLowerCase().endsWith(`week${week}.png`))
   return key ? weekImages[key].default : null
 }
 
