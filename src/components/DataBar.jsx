@@ -7,17 +7,21 @@ export default function DataBar({
   weeks = 14,
   days = 3,
   daysToDue = 179,
+  trimester = 2,
   totalSegments = 7,
   filledSegments = 3,
 }) {
+  const trimesterNames = { 1: "ראשון", 2: "שני", 3: "שלישי" }
+  const trimesterName = trimesterNames[trimester] || trimester
+
   return (
     <div className="flex flex-col items-center gap-2 rounded-3xl bg-white p-card-padding text-center soft-shadow">
-      <div className="flex flex-col">
+      <div className="flex flex-col items-center">
         <span className="font-heebo text-headline-3xl font-bold text-primary">
           שבוע {weeks}
         </span>
         <span className="font-assistant text-body-base text-slate-500">
-          {weeks} שבועות ו-{days} ימים
+          שליש {trimesterName} • {weeks} שבועות ו-{days} ימים
         </span>
       </div>
 

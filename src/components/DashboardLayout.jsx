@@ -4,6 +4,7 @@ import DataBar from "./DataBar"
 import DashboardContentAccordions from "./DashboardContentAccordions"
 import BottomNav from "./BottomNav"
 import { pregnancyStatus } from "../utils/pregnancy"
+import { pregnancyWeeksData } from "../data/pregnancyWeeksData"
 
 // Auto-import available weekly illustrations
 const weekImages = import.meta.glob("../assets/illustrations/**/*.{png,PNG}", {
@@ -35,6 +36,37 @@ export default function DashboardLayout({ name = "את", edd }) {
 
   const weekImage = getWeekImage(week)
   const greeting = greetingForHour(new Date().getHours())
+  
+  const currentWeekData = pregnancyWeeksData[week] || pregnancyWeeksData[14]
+  const tipsContent = currentWeekData.tips?.content || currentWeekData.mother?.tipContent || ""
+  const tipsTitle = currentWeekData.tips?.title || "טיפ שבועי / בדיקות מומלצות"
+
+  const accordionItems = [
+    {
+      title: currentWeekData.fetus?.title || "מה קורה לעובר השבוע?",
+      body: (
+        <div className="flex flex-col gap-3">
+          <span>{currentWeekData.fetus?.content}</span>
+          {currentWeekData.fetus?.size && currentWeekData.fetus.size !== "placeholder_graphic" && (
+            <span className="inline-block w-fit rounded-full bg-primary-container px-3 py-1 text-sm font-medium text-on-primary-container">
+              גודל מוערך: {currentWeekData.fetus.size}
+            </span>
+          )}
+        </div>
+      ),
+      variant: "default",
+    },
+    {
+      title: currentWeekData.mother?.title || "מה קורה לגוף שלך?",
+      body: <span>{currentWeekData.mother?.content}</span>,
+      variant: "default",
+    },
+    {
+      title: tipsTitle,
+      body: <span>{tipsContent}</span>,
+      variant: "tip",
+    },
+  ]
 
   const totalSegments = 7
   const filledSegments = Math.max(1, Math.round(progress * totalSegments))
@@ -59,13 +91,14 @@ export default function DashboardLayout({ name = "את", edd }) {
           weeks={week}
           days={day}
           daysToDue={daysToDue}
+          trimester={currentWeekData.trimester}
           filledSegments={filledSegments}
           totalSegments={totalSegments}
         />
 
         {/* Expandable weekly content */}
         <div className="mt-2">
-          <DashboardContentAccordions />
+          <DashboardContentAccordions items={accordionItems} />
         </div>
       </main>
 

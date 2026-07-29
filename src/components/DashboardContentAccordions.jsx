@@ -65,25 +65,8 @@ function AccordionCard({ title, children, variant = "default", isOpen, onToggle 
  * and the weekly tip / preparations. Behaves as an accordion where opening one
  * card closes the others. Pass your own `items` to override the defaults.
  */
-export default function DashboardContentAccordions({ items }) {
-  const cards =
-    items ?? [
-      {
-        title: "מה קורה לעובר השבוע?",
-        body: "העובר בגודל של לימון. האיברים מתפתחים במהירות.",
-        variant: "default",
-      },
-      {
-        title: "מה קורה לגוף שלך?",
-        body: "ייתכן שתתחילי להרגיש יותר אנרגטית. השינויים ההורמונליים מתאזנים.",
-        variant: "default",
-      },
-      {
-        title: "טיפ שבועי / הכנות",
-        body: "קבעי את האולטרסאונד הבא שלך וזכרי לשתות הרבה מים.",
-        variant: "tip",
-      },
-    ]
+export default function DashboardContentAccordions({ items = [] }) {
+  const cards = items
 
   // First card open by default, like the prototype.
   const [openIndex, setOpenIndex] = useState(0)
