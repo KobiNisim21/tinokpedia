@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="he"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>תינוקפדיה - הרשמה / התחברות</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&amp;family=Heebo:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#f9f9f8",
+                        "surface-dim": "#dadad9",
+                        "on-tertiary-fixed-variant": "#224e47",
+                        "outline": "#707979",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#f3f4f3",
+                        "on-secondary-container": "#735f61",
+                        "white": "#FFFFFF",
+                        "tertiary-fixed": "#bdece2",
+                        "on-primary-fixed": "#002021",
+                        "on-primary-container": "#215b5d",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#dac0c2",
+                        "tertiary": "#3b665f",
+                        "primary-fixed-dim": "#98d0d2",
+                        "outline-variant": "#bfc8c8",
+                        "on-tertiary-container": "#2f5a53",
+                        "inverse-primary": "#98d0d2",
+                        "on-error": "#ffffff",
+                        "primary": "#2e6769",
+                        "on-secondary-fixed": "#26181a",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#e2e2e2",
+                        "surface-variant": "#e2e2e2",
+                        "slate-500": "#64748B",
+                        "secondary": "#6d5a5b",
+                        "on-background": "#1a1c1c",
+                        "inverse-surface": "#2f3130",
+                        "tertiary-container": "#a2d0c7",
+                        "on-tertiary-fixed": "#00201c",
+                        "secondary-fixed": "#f7dcde",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#a2d0c6",
+                        "slate-800": "#1E293B",
+                        "surface-tint": "#2e6769",
+                        "primary-fixed": "#b4edef",
+                        "surface": "#f9f9f8",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#eeeeed",
+                        "surface-bright": "#f9f9f8",
+                        "on-secondary-fixed-variant": "#544244",
+                        "secondary-container": "#f7dcde",
+                        "primary-container": "#99d1d3",
+                        "inverse-on-surface": "#f1f1f0",
+                        "on-surface": "#1a1c1c",
+                        "on-surface-variant": "#404849",
+                        "surface-container-high": "#e8e8e7",
+                        "on-primary-fixed-variant": "#104f51"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "3xl": "1.5rem"
+                    },
+                    "spacing": {
+                        "margin-mobile": "1.25rem",
+                        "gutter": "1rem",
+                        "card-padding": "1.5rem",
+                        "margin-desktop": "2.5rem",
+                        "stack-gap": "1rem"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Heebo"],
+                        "body-sm": ["Assistant"],
+                        "headline-3xl-mobile": ["Heebo"],
+                        "label-caps": ["Heebo"],
+                        "body-base": ["Assistant"],
+                        "headline-3xl": ["Heebo"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-3xl-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-base": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-3xl": ["30px", { "lineHeight": "36px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-stone-50 {
+            background-color: #fafaf9; /* Fallback for arbitrary */
+        }
+        .text-teal-100 {
+            color: #ccfbf1;
+        }
+        .bg-teal-100 {
+            background-color: #ccfbf1;
+        }
+        /* Custom radio styling for a softer look */
+        .radio-soft:checked + label {
+            background-color: #e2e2e2; /* surface-variant */
+            color: #1a1c1c; /* on-surface */
+            font-weight: 600;
+        }
+        
+        /* Tab switching logic */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+        .tab-btn.active {
+            border-bottom: 2px solid #2e6769; /* primary */
+            color: #2e6769; /* primary */
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-base antialiased min-h-screen flex flex-col justify-center items-center py-8">
+<div class="w-full max-w-[600px] px-margin-mobile flex flex-col items-center">
+<!-- Header -->
+<header class="text-center mb-4 flex flex-col items-center w-full">
+<img alt="Tinokpedia Logo" class="w-20 h-20 rounded-full mb-4 shadow-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlEhAy0y00POwk857_uZPhESv3Uf7LXzyUPQAYMbMlNtaBcc8dt-P30cieIRejLePgFt97hinHjAfgksHGWAgyhbsgrXwsI6clbyVkl1JhczETa3jzbso4Ul9i8qgfPH9JWmra2KO-xRPy4cuxNWIKA5nzLjjXe8J9lcTtvlcsLvqkJbNS6OTmA03E0mwYgb5W4dvIu4iaFhosMwzTapmtrOHY6iPZ3QaWveEXsj7V7miqrbi2LeGkIpGpLiP4qCtzgPbpWYiVciI"/>
+<h1 class="font-headline-3xl-mobile text-headline-3xl-mobile text-primary mb-2">ברוכה הבאה לתינוקפדיה</h1>
+<p class="font-body-base text-body-base text-on-surface-variant">המסע המופלא שלך מתחיל כאן</p>
+</header>
+<!-- Tabs -->
+<div class="flex w-full mb-6 border-b border-surface-variant">
+<button class="flex-1 pb-2 text-center font-headline-xl text-lg text-on-surface-variant tab-btn active" data-target="register-tab" id="btn-register">הרשמה</button>
+<button class="flex-1 pb-2 text-center font-headline-xl text-lg text-on-surface-variant tab-btn" data-target="login-tab" id="btn-login">התחברות</button>
+</div>
+<!-- Form Card -->
+<main class="w-full bg-white rounded-3xl p-card-padding shadow-[0_4px_12px_rgba(30,41,59,0.04)] mb-stack-gap">
+<!-- Google Button (Shared) -->
+<button class="w-full bg-surface-container-low text-on-surface font-headline-xl text-lg py-3 rounded-xl border border-outline-variant hover:bg-surface-variant transition-colors flex justify-center items-center gap-3 mb-6" type="button">
+<svg class="w-5 h-5" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+<span id="google-btn-text">התחברות מהירה עם Google</span>
+</button>
+<div class="flex items-center gap-4 mb-6">
+<div class="flex-1 h-px bg-surface-variant"></div>
+<span class="font-body-sm text-on-surface-variant text-sm">או באמצעות דוא"ל וסיסמה</span>
+<div class="flex-1 h-px bg-surface-variant"></div>
+</div>
+<form action="#" class="flex flex-col gap-6 w-full" method="POST">
+<!-- Registration Tab Content -->
+<div class="flex-col gap-6 tab-content active w-full" id="register-tab">
+<!-- Name Input -->
+<div class="flex flex-col gap-2">
+<label class="font-headline-xl text-headline-xl text-primary" for="userName">מה השם שלך?</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 font-body-base text-body-base text-on-background placeholder:text-outline focus:ring-2 focus:ring-primary-container outline-none transition-shadow" id="userName" name="userName" placeholder="הכניסי את שמך" type="text"/>
+</div>
+<!-- Calculation Method Toggle -->
+<div class="flex flex-col gap-3">
+<span class="font-headline-xl text-headline-xl text-primary">איך תרצי לחשב את גיל ההריון?</span>
+<div class="flex bg-surface-container-low rounded-xl p-1 relative">
+<input checked="" class="sr-only radio-soft" id="calcLastPeriod" name="calcMethod" type="radio" value="last_period"/>
+<label class="flex-1 text-center py-2 rounded-lg cursor-pointer font-body-base text-body-base text-on-surface-variant transition-colors duration-200" for="calcLastPeriod">לפי וסת אחרון</label>
+<input class="sr-only radio-soft" id="calcDueDate" name="calcMethod" type="radio" value="due_date"/>
+<label class="flex-1 text-center py-2 rounded-lg cursor-pointer font-body-base text-body-base text-on-surface-variant transition-colors duration-200" for="calcDueDate">לפי תאריך לידה משוער</label>
+</div>
+</div>
+<!-- Date Picker -->
+<div class="flex flex-col gap-2">
+<label class="font-body-sm text-body-sm text-on-surface-variant" for="calcDate" id="dateLabel">תאריך וסת אחרון</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-primary">calendar_month</span>
+<input class="w-full bg-surface-container-low border-none rounded-xl pr-12 pl-4 py-3 font-body-base text-body-base text-on-background focus:ring-2 focus:ring-primary-container outline-none transition-shadow appearance-none" id="calcDate" name="calcDate" type="date"/>
+</div>
+</div>
+</div>
+<!-- Login Tab Content -->
+<div class="flex-col gap-6 tab-content w-full" id="login-tab">
+<div class="flex flex-col gap-2">
+<label class="font-headline-xl text-headline-xl text-primary" for="email">דוא"ל</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 font-body-base text-body-base text-on-background placeholder:text-outline focus:ring-2 focus:ring-primary-container outline-none transition-shadow" id="email" name="email" placeholder='הכניסי כתובת דוא"ל' type="email"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-headline-xl text-headline-xl text-primary" for="password">סיסמה</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 font-body-base text-body-base text-on-background placeholder:text-outline focus:ring-2 focus:ring-primary-container outline-none transition-shadow" id="password" name="password" placeholder="הכניסי סיסמה" type="password"/>
+</div>
+</div>
+<!-- CTA Button -->
+<button class="mt-4 w-full bg-primary-container text-on-primary-container font-headline-xl text-headline-xl py-4 rounded-xl hover:opacity-90 transition-opacity active:scale-[0.98] flex justify-center items-center gap-2" id="main-submit-btn" type="submit">
+                    בואי נתחיל
+                    <span class="material-symbols-outlined">arrow_back</span>
+</button>
+</form>
+</main>
+<!-- Secondary Text -->
+<footer class="text-center w-full flex items-center justify-center gap-2 text-on-surface-variant opacity-80">
+<span class="material-symbols-outlined text-sm">lock</span>
+<p class="font-body-sm text-body-sm">הנתונים שלך נשמרים בפרטיות ובאבטחה מלאה</p>
+</footer>
+</div>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Date label logic
+            const radioLastPeriod = document.getElementById('calcLastPeriod');
+            const radioDueDate = document.getElementById('calcDueDate');
+            const dateLabel = document.getElementById('dateLabel');
+
+            function updateLabel() {
+                if (radioLastPeriod.checked) {
+                    dateLabel.textContent = 'תאריך וסת אחרון';
+                } else if (radioDueDate.checked) {
+                    dateLabel.textContent = 'תאריך לידה משוער';
+                }
+            }
+
+            if(radioLastPeriod && radioDueDate) {
+                radioLastPeriod.addEventListener('change', updateLabel);
+                radioDueDate.addEventListener('change', updateLabel);
+            }
+
+            // Tab logic
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const mainSubmitBtn = document.getElementById('main-submit-btn');
+            const googleBtnText = document.getElementById('google-btn-text');
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove active class from all buttons and contents
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+
+                    // Add active class to clicked button and target content
+                    btn.classList.add('active');
+                    const targetId = btn.getAttribute('data-target');
+                    document.getElementById(targetId).classList.add('active');
+
+                    // Update button texts
+                    if (targetId === 'login-tab') {
+                        mainSubmitBtn.innerHTML = 'התחברי <span class="material-symbols-outlined">arrow_back</span>';
+                        googleBtnText.textContent = 'התחברות עם Google';
+                    } else {
+                        mainSubmitBtn.innerHTML = 'בואי נתחיל <span class="material-symbols-outlined">arrow_back</span>';
+                        googleBtnText.textContent = 'התחברות מהירה עם Google';
+                    }
+                });
+            });
+        });
+    </script>
+</body></html>

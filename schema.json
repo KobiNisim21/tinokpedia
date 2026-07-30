@@ -1,0 +1,9 @@
+{
+  "_id": "ObjectId",
+  "googleId": "string (optional)",
+  "email": "string",
+  "name": "string",
+  "edd": "ISODate (תאריך לידה משוער מחושב)",
+  "calculationMethod": "LMP | EDD",
+  "createdAt": "ISODate"
+}
