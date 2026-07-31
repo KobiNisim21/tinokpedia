@@ -3,6 +3,7 @@ import PregnancyCircleProgressBar from "./PregnancyCircleProgressBar"
 import DataBar from "./DataBar"
 import DashboardContentAccordions from "./DashboardContentAccordions"
 import BottomNav from "./BottomNav"
+import PWAInstallBanner from "./PWAInstallBanner"
 import { pregnancyStatus } from "../utils/pregnancy"
 import { pregnancyWeeksData } from "../data/pregnancyWeeksData"
 
@@ -82,6 +83,9 @@ export default function DashboardLayout({ name = "את", edd, onTabChange }) {
             {greeting}, {name} 👋
           </h2>
         </div>
+
+        {/* PWA install prompt */}
+        <PWAInstallBanner />
 
         {/* Hero illustration + progress ring */}
         <PregnancyCircleProgressBar week={week} imageSrc={weekImage} />
