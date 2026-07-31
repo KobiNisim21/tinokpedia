@@ -3,6 +3,7 @@ import { useUser, useAuth } from "@clerk/clerk-react"
 import Header from "./Header"
 import BottomNav from "./BottomNav"
 import CreatePostModal from "./CreatePostModal"
+import PostCommentsModal from "./PostCommentsModal"
 import { pregnancyStatus } from "../utils/pregnancy"
 
 const CATEGORIES = ["הכל", "הטרימסטר שלי", "בדיקות וייעוץ", "חוויות ושיח"]
@@ -52,6 +53,7 @@ export default function CommunityScreen({ onTabChange, edd }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [posting, setPosting] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(true)
+  const [commentsPost, setCommentsPost] = useState(null) // post object for comments modal
 
   const status = edd ? pregnancyStatus(edd) : null
 
@@ -158,25 +160,31 @@ export default function CommunityScreen({ onTabChange, edd }) {
     setIsModalOpen(false)
   }
 
-  // Toggle like
+  // Helper: persist all posts to localStorage
+  function saveAllPostsToLS(updatedPosts) {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(updatedPosts))
+    } catch { /* ignore */ }
+  }
+
+  // Toggle like — optimistic + localStorage + background API
   async function handleLike(postId) {
-    const clerkId = user?.id
-    if (!clerkId) return
+    const uid = user?.id || "current_user"
 
-    // Optimistic update
-    setPosts((prev) =>
-      prev.map((p) => {
-        if ((p._id || p.id) !== postId) return p
-        const liked = p.likes?.includes(clerkId)
-        return {
-          ...p,
-          likes: liked
-            ? p.likes.filter((id) => id !== clerkId)
-            : [...(p.likes || []), clerkId],
-        }
-      })
-    )
+    const updatedPosts = posts.map((p) => {
+      if ((p._id || p.id) !== postId) return p
+      const liked = p.likes?.includes(uid)
+      return {
+        ...p,
+        likes: liked
+          ? p.likes.filter((id) => id !== uid)
+          : [...(p.likes || []), uid],
+      }
+    })
+    setPosts(updatedPosts)
+    saveAllPostsToLS(updatedPosts)
 
+    // Background API call — swallow errors
     try {
       const token = await getToken()
       await fetch("/api/posts", {
@@ -187,13 +195,57 @@ export default function CommunityScreen({ onTabChange, edd }) {
         },
         body: JSON.stringify({ action: "like", postId }),
       })
-    } catch {
-      // revert on failure — refetch
-      fetchPosts()
-    }
+    } catch { /* local dev — ignore */ }
   }
 
-  const clerkId = user?.id
+  // Add comment — optimistic + localStorage + background API
+  async function handleAddComment({ postId, text, isAnonymous }) {
+    const newComment = {
+      id: `c_${Date.now()}`,
+      authorName: isAnonymous
+        ? "חברה אנונימית"
+        : user?.fullName || user?.firstName || "משתמשת",
+      isAnonymous,
+      text,
+      createdAt: new Date().toISOString(),
+    }
+
+    const updatedPosts = posts.map((p) => {
+      if ((p._id || p.id) !== postId) return p
+      return {
+        ...p,
+        comments: [...(p.comments || []), newComment],
+        commentsCount: (p.commentsCount || 0) + 1,
+      }
+    })
+    setPosts(updatedPosts)
+    saveAllPostsToLS(updatedPosts)
+
+    // Keep commentsPost in sync so modal re-renders
+    setCommentsPost((prev) => {
+      if (!prev || (prev._id || prev.id) !== postId) return prev
+      return {
+        ...prev,
+        comments: [...(prev.comments || []), newComment],
+        commentsCount: (prev.commentsCount || 0) + 1,
+      }
+    })
+
+    // Background API call
+    try {
+      const token = await getToken()
+      await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: "comment", postId, comment: newComment }),
+      })
+    } catch { /* local dev — ignore */ }
+  }
+
+  const clerkId = user?.id || "current_user"
 
   return (
     <div className="flex min-h-screen flex-col md:items-center">
@@ -330,10 +382,10 @@ export default function CommunityScreen({ onTabChange, edd }) {
                     <button
                       type="button"
                       onClick={() => handleLike(id)}
-                      className="flex items-center gap-1 text-slate-500 transition-colors hover:text-secondary"
+                      className="flex items-center gap-1 transition-colors hover:text-secondary"
                     >
                       <span
-                        className={`material-symbols-outlined ${liked ? "text-secondary" : ""}`}
+                        className={`material-symbols-outlined ${liked ? "text-red-400" : "text-slate-500"}`}
                         style={
                           liked
                             ? { fontVariationSettings: "'FILL' 1" }
@@ -342,19 +394,20 @@ export default function CommunityScreen({ onTabChange, edd }) {
                       >
                         {liked ? "favorite" : "favorite_border"}
                       </span>
-                      <span className="font-body-sm text-body-sm">
+                      <span className={`font-body-sm text-body-sm ${liked ? "text-red-400" : "text-slate-500"}`}>
                         {post.likes?.length || 0}
                       </span>
                     </button>
                     <button
                       type="button"
+                      onClick={() => setCommentsPost(post)}
                       className="flex items-center gap-1 text-slate-500 transition-colors hover:text-primary"
                     >
                       <span className="material-symbols-outlined">
                         chat_bubble_outline
                       </span>
                       <span className="font-body-sm text-body-sm">
-                        {post.commentsCount || 0} תגובות
+                        {post.commentsCount || post.comments?.length || 0} תגובות
                       </span>
                     </button>
                   </div>
@@ -370,6 +423,14 @@ export default function CommunityScreen({ onTabChange, edd }) {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreatePost}
         loading={posting}
+      />
+
+      <PostCommentsModal
+        isOpen={!!commentsPost}
+        onClose={() => setCommentsPost(null)}
+        post={commentsPost}
+        onAddComment={handleAddComment}
+        currentUserName={user?.fullName || user?.firstName || "משתמשת"}
       />
 
       <BottomNav active="community" onSelect={onTabChange} />

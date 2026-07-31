@@ -9,6 +9,13 @@ const PostSchema = new mongoose.Schema({
   category: { type: String, enum: ['בדיקות וייעוץ', 'חוויות ושיח', 'הטרימסטר שלי'] },
   content: { type: String, required: true },
   likes: { type: [String], default: [] },
+  comments: { type: [{
+    id: String,
+    authorName: String,
+    isAnonymous: { type: Boolean, default: false },
+    text: String,
+    createdAt: { type: Date, default: Date.now }
+  }], default: [] },
   commentsCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });

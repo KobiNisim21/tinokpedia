@@ -51,6 +51,25 @@ export default async function handler(req, res) {
       return res.json({ likes: post.likes })
     }
 
+    // Add comment
+    if (action === 'comment') {
+      const { postId, comment } = req.body
+      if (!postId || !comment?.text) return res.status(400).json({ error: 'postId and comment.text required' })
+      const post = await Post.findById(postId)
+      if (!post) return res.status(404).json({ error: 'Post not found' })
+      if (!post.comments) post.comments = []
+      post.comments.push({
+        id: comment.id || `c_${Date.now()}`,
+        authorName: comment.authorName,
+        isAnonymous: !!comment.isAnonymous,
+        text: comment.text,
+        createdAt: comment.createdAt || new Date().toISOString(),
+      })
+      post.commentsCount = post.comments.length
+      await post.save()
+      return res.json({ comments: post.comments, commentsCount: post.commentsCount })
+    }
+
     // Create post
     const { authorName, isAnonymous, week, trimester, category, content } = req.body
     if (!content) return res.status(400).json({ error: 'content required' })
