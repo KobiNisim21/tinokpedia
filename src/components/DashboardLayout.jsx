@@ -30,7 +30,7 @@ function greetingForHour(hour) {
  * The weekly tracking screen. Receives the user's name and estimated due date
  * (EDD) and derives the current week/day/progress from it.
  */
-export default function DashboardLayout({ name = "את", edd }) {
+export default function DashboardLayout({ name = "את", edd, onTabChange }) {
   const status = pregnancyStatus(edd)
   const { week, day, daysToDue, progress } = status
 
@@ -102,7 +102,7 @@ export default function DashboardLayout({ name = "את", edd }) {
         </div>
       </main>
 
-      <BottomNav active="tracking" />
+      <BottomNav active="tracking" onSelect={onTabChange} />
     </div>
   )
 }

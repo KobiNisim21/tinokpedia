@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import SignupScreen from "./components/SignupScreen"
 import OnboardingForm from "./components/OnboardingForm"
 import DashboardLayout from "./components/DashboardLayout"
+import ProfileScreen from "./components/ProfileScreen"
 import { syncUserProfile, getUserProfile } from "./services/api"
 
 /**
@@ -11,13 +12,14 @@ import { syncUserProfile, getUserProfile } from "./services/api"
  * Auth-aware routing using Clerk:
  * 1. Not signed in → SignupScreen (tabbed register/login)
  * 2. Signed in but no EDD → OnboardingForm (for Google sign-in users)
- * 3. Signed in with EDD → DashboardLayout
+ * 3. Signed in with EDD → DashboardLayout or ProfileScreen (via tab navigation)
  */
 export default function App() {
   const { isSignedIn, user, isLoaded } = useUser()
   const { getToken } = useAuth()
   const [profile, setProfile] = useState(null) // { name, edd }
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("tracking") // "tracking" | "profile"
 
   // Load profile from Clerk metadata or MongoDB when user signs in
   useEffect(() => {
@@ -108,6 +110,16 @@ export default function App() {
     await handleSignupComplete(data)
   }
 
+  // Handle profile update from ProfileScreen edit form
+  function handleProfileUpdate(updatedProfile) {
+    setProfile(updatedProfile)
+  }
+
+  // Handle tab navigation
+  function handleTabChange(tabId) {
+    setActiveTab(tabId)
+  }
+
   // Loading state
   if (!isLoaded || (isSignedIn && loading)) {
     return (
@@ -132,6 +144,22 @@ export default function App() {
     return <OnboardingForm onComplete={handleOnboardingComplete} />
   }
 
-  // Signed in with profile → show dashboard
-  return <DashboardLayout name={profile.name} edd={profile.edd} />
+  // Signed in with profile → show dashboard or profile based on active tab
+  if (activeTab === "profile") {
+    return (
+      <ProfileScreen
+        profile={profile}
+        onProfileUpdate={handleProfileUpdate}
+        onTabChange={handleTabChange}
+      />
+    )
+  }
+
+  return (
+    <DashboardLayout
+      name={profile.name}
+      edd={profile.edd}
+      onTabChange={handleTabChange}
+    />
+  )
 }
