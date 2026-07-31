@@ -55,6 +55,24 @@ export default function CommunityScreen({ onTabChange, edd }) {
 
   const status = edd ? pregnancyStatus(edd) : null
 
+  const LS_KEY = "tinokpedia_community_posts"
+
+  function loadLocalPosts() {
+    try {
+      const raw = localStorage.getItem(LS_KEY)
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  }
+
+  function saveLocalPost(post) {
+    try {
+      const existing = loadLocalPosts()
+      localStorage.setItem(LS_KEY, JSON.stringify([post, ...existing]))
+    } catch { /* quota exceeded — ignore */ }
+  }
+
   // Fetch posts
   const fetchPosts = useCallback(async () => {
     try {
@@ -67,12 +85,22 @@ export default function CommunityScreen({ onTabChange, edd }) {
       }
       const res = await fetch(`/api/posts?${params.toString()}`)
       if (res.ok) {
-        const data = await res.json()
-        setPosts(data)
+        const apiPosts = await res.json()
+        // Merge with any local-only posts (that haven't synced yet)
+        const localPosts = loadLocalPosts()
+        const apiIds = new Set(apiPosts.map((p) => p._id || p.id))
+        const localOnly = localPosts.filter(
+          (p) => !apiIds.has(p._id || p.id)
+        )
+        setPosts([...localOnly, ...apiPosts])
+        setLoadingPosts(false)
+        return
       }
     } catch {
-      // Offline or error — keep existing posts
+      // API unreachable — use localStorage fallback
     }
+    // Fallback: show local posts
+    setPosts(loadLocalPosts())
     setLoadingPosts(false)
   }, [activeCategory, status])
 
@@ -83,31 +111,49 @@ export default function CommunityScreen({ onTabChange, edd }) {
   // Create post
   async function handleCreatePost({ content, isAnonymous }) {
     setPosting(true)
+
+    const localPost = {
+      _id: `local_${Date.now()}`,
+      clerkId: user?.id,
+      content,
+      isAnonymous,
+      authorName: isAnonymous
+        ? "חברה אנונימית"
+        : user?.fullName || user?.firstName || "משתמשת",
+      week: status?.week ?? 0,
+      trimester: status?.trimester ?? 1,
+      category: "חוויות ושיח",
+      likes: [],
+      commentsCount: 0,
+      createdAt: new Date().toISOString(),
+    }
+
     try {
       const token = await getToken()
-      const body = {
-        content,
-        isAnonymous,
-        authorName: user?.fullName || user?.firstName || "משתמשת",
-        week: status?.week ?? 0,
-        trimester: status?.trimester ?? 1,
-        category: "חוויות ושיח", // default category
-      }
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(localPost),
       })
       if (res.ok) {
-        const newPost = await res.json()
-        setPosts((prev) => [newPost, ...prev])
+        const savedPost = await res.json()
+        setPosts((prev) => [savedPost, ...prev])
+      } else {
+        // API returned error — save locally and show anyway
+        saveLocalPost(localPost)
+        setPosts((prev) => [localPost, ...prev])
       }
     } catch {
-      // silently fail
+      // Network error — save locally and show anyway
+      saveLocalPost(localPost)
+      setPosts((prev) => [localPost, ...prev])
     }
+
+    // Switch to "הכל" so the user always sees their new post
+    setActiveCategory("הכל")
     setPosting(false)
     setIsModalOpen(false)
   }
