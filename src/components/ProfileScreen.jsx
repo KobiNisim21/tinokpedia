@@ -2,6 +2,7 @@ import { useState, useRef } from "react"
 import { useUser, useAuth, useClerk } from "@clerk/clerk-react"
 import Header from "./Header"
 import BottomNav from "./BottomNav"
+import HebrewDatePicker from "./HebrewDatePicker"
 import { pregnancyStatus, eddFromInputs, parseDdMmYyyy, isoToDdMmYyyy } from "../utils/pregnancy"
 import { syncUserProfile } from "../services/api"
 
@@ -63,7 +64,8 @@ export default function ProfileScreen({ profile, onProfileUpdate, onTabChange })
   const [editName, setEditName] = useState("")
   const [editMethod, setEditMethod] = useState("last_period")
   const [editDateText, setEditDateText] = useState("")
-  const nativePickerRef = useRef(null)
+  
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   const status = profile?.edd ? pregnancyStatus(profile.edd) : null
   const trimesterNames = { 1: "ראשון", 2: "שני", 3: "שלישי" }
@@ -90,15 +92,8 @@ export default function ProfileScreen({ profile, onProfileUpdate, onTabChange })
     setEditDateText(maskDate(event.target.value))
   }
 
-  function handleNativePick(event) {
-    setEditDateText(isoToDdMmYyyy(event.target.value))
-  }
-
-  function openNativePicker() {
-    const el = nativePickerRef.current
-    if (!el) return
-    if (typeof el.showPicker === "function") el.showPicker()
-    else el.focus()
+  function handleCalendarSelect(date) {
+    setEditDateText(isoToDdMmYyyy(date.toISOString()))
   }
 
   async function handleSave(event) {
@@ -320,7 +315,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, onTabChange })
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={openNativePicker}
+                      onClick={() => setIsCalendarOpen(true)}
                       aria-label="פתחי לוח שנה"
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-primary"
                     >
@@ -336,15 +331,6 @@ export default function ProfileScreen({ profile, onProfileUpdate, onTabChange })
                       onChange={handleDateTextChange}
                       placeholder="dd/mm/yyyy"
                       className="w-full rounded-xl border-none bg-surface-container-low py-3 pl-4 pr-12 text-left font-assistant text-body-base text-on-background outline-none transition-shadow placeholder:text-outline focus:ring-2 focus:ring-primary-container"
-                    />
-
-                    <input
-                      ref={nativePickerRef}
-                      type="date"
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      onChange={handleNativePick}
-                      className="pointer-events-none absolute bottom-0 right-6 h-0 w-0 opacity-0"
                     />
                   </div>
                 </div>
@@ -402,6 +388,13 @@ export default function ProfileScreen({ profile, onProfileUpdate, onTabChange })
           </p>
         </footer>
       </main>
+
+      <HebrewDatePicker
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        onSelect={handleCalendarSelect}
+        selectedDate={parsedEditDate}
+      />
 
       <BottomNav active="profile" onSelect={onTabChange} />
     </div>

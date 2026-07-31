@@ -1,6 +1,7 @@
 import { useState, useRef } from "react"
 import { useSignUp, useSignIn } from "@clerk/clerk-react"
 import logo from "../assets/logo.png"
+import HebrewDatePicker from "./HebrewDatePicker"
 import {
   eddFromInputs,
   parseDdMmYyyy,
@@ -77,6 +78,9 @@ export default function SignupScreen({ onComplete }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
+  // Calendar state
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+
   // OTP verification state
   const [pendingVerification, setPendingVerification] = useState(false)
   const [code, setCode] = useState("")
@@ -100,15 +104,8 @@ export default function SignupScreen({ onComplete }) {
     setDateText(maskDate(event.target.value))
   }
 
-  function handleNativePick(event) {
-    setDateText(isoToDdMmYyyy(event.target.value))
-  }
-
-  function openNativePicker() {
-    const el = nativePickerRef.current
-    if (!el) return
-    if (typeof el.showPicker === "function") el.showPicker()
-    else el.focus()
+  function handleCalendarSelect(date) {
+    setDateText(isoToDdMmYyyy(date.toISOString()))
   }
 
   async function handleGoogleSignIn() {
@@ -378,7 +375,7 @@ export default function SignupScreen({ onComplete }) {
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={openNativePicker}
+                      onClick={() => setIsCalendarOpen(true)}
                       aria-label="פתחי לוח שנה"
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-primary"
                     >
@@ -395,15 +392,6 @@ export default function SignupScreen({ onComplete }) {
                       onChange={handleDateTextChange}
                       placeholder="dd/mm/yyyy"
                       className="w-full rounded-xl border-none bg-surface-container-low py-3 pl-4 pr-12 text-left font-assistant text-body-base text-on-background outline-none transition-shadow placeholder:text-outline focus:ring-2 focus:ring-primary-container"
-                    />
-
-                    <input
-                      ref={nativePickerRef}
-                      type="date"
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      onChange={handleNativePick}
-                      className="pointer-events-none absolute bottom-0 right-6 h-0 w-0 opacity-0"
                     />
                   </div>
                 </div>
@@ -473,6 +461,13 @@ export default function SignupScreen({ onComplete }) {
           </p>
         </footer>
       </div>
+
+      <HebrewDatePicker
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        onSelect={handleCalendarSelect}
+        selectedDate={parsedDate}
+      />
     </div>
   )
 }
