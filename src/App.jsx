@@ -4,6 +4,7 @@ import SignupScreen from "./components/SignupScreen"
 import OnboardingForm from "./components/OnboardingForm"
 import DashboardLayout from "./components/DashboardLayout"
 import ProfileScreen from "./components/ProfileScreen"
+import ToolsScreen from "./components/ToolsScreen"
 import { syncUserProfile, getUserProfile } from "./services/api"
 
 /**
@@ -144,7 +145,7 @@ export default function App() {
     return <OnboardingForm onComplete={handleOnboardingComplete} />
   }
 
-  // Signed in with profile → show dashboard or profile based on active tab
+  // Signed in with profile → show screen based on active tab
   if (activeTab === "profile") {
     return (
       <ProfileScreen
@@ -153,6 +154,10 @@ export default function App() {
         onTabChange={handleTabChange}
       />
     )
+  }
+
+  if (activeTab === "tools") {
+    return <ToolsScreen onTabChange={handleTabChange} />
   }
 
   return (
