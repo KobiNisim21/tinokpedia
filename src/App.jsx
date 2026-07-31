@@ -5,6 +5,7 @@ import OnboardingForm from "./components/OnboardingForm"
 import DashboardLayout from "./components/DashboardLayout"
 import ProfileScreen from "./components/ProfileScreen"
 import ToolsScreen from "./components/ToolsScreen"
+import CommunityScreen from "./components/CommunityScreen"
 import { syncUserProfile, getUserProfile } from "./services/api"
 
 /**
@@ -224,6 +225,8 @@ export default function App() {
     )
   } else if (activeTab === "tools") {
     screen = <ToolsScreen onTabChange={handleTabChange} />
+  } else if (activeTab === "community") {
+    screen = <CommunityScreen onTabChange={handleTabChange} edd={profile.edd} />
   } else {
     screen = (
       <DashboardLayout
