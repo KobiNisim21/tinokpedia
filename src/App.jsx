@@ -21,6 +21,33 @@ export default function App() {
   const [profile, setProfile] = useState(null) // { name, edd }
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("tracking") // "tracking" | "profile"
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
+  const [showOnlineToast, setShowOnlineToast] = useState(false)
+
+  // Online / offline listener
+  useEffect(() => {
+    function handleOffline() {
+      setIsOffline(true)
+      setShowOnlineToast(false)
+    }
+    function handleOnline() {
+      setIsOffline(false)
+      setShowOnlineToast(true)
+    }
+    window.addEventListener("offline", handleOffline)
+    window.addEventListener("online", handleOnline)
+    return () => {
+      window.removeEventListener("offline", handleOffline)
+      window.removeEventListener("online", handleOnline)
+    }
+  }, [])
+
+  // Auto-dismiss the "back online" toast after 3 seconds
+  useEffect(() => {
+    if (!showOnlineToast) return
+    const t = setTimeout(() => setShowOnlineToast(false), 3000)
+    return () => clearTimeout(t)
+  }, [showOnlineToast])
 
   // Load profile from Clerk metadata or MongoDB when user signs in
   useEffect(() => {
@@ -121,10 +148,40 @@ export default function App() {
     setActiveTab(tabId)
   }
 
+  // ── Network status banners ──
+  const networkOverlay = (
+    <>
+      {/* Offline banner — fixed top */}
+      {isOffline && (
+        <div className="fixed inset-x-0 top-0 z-[300] flex items-center justify-center gap-2 bg-amber-50 px-4 py-2.5 shadow-sm">
+          <span className="material-symbols-outlined text-amber-600 text-[20px]">
+            cloud_off
+          </span>
+          <span className="font-assistant text-body-sm text-amber-800">
+            מצב אופליין — התוכן זמין לקריאה
+          </span>
+        </div>
+      )}
+
+      {/* Online toast — fixed top, auto-dismiss */}
+      {showOnlineToast && (
+        <div className="fixed inset-x-0 top-0 z-[300] flex items-center justify-center gap-2 bg-emerald-50 px-4 py-2.5 shadow-sm animate-in">
+          <span className="material-symbols-outlined text-emerald-600 text-[20px]">
+            wifi
+          </span>
+          <span className="font-assistant text-body-sm text-emerald-800">
+            חזרת לחיבור לרשת!
+          </span>
+        </div>
+      )}
+    </>
+  )
+
   // Loading state
   if (!isLoaded || (isSignedIn && loading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
+        {networkOverlay}
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <span className="font-assistant text-body-base text-on-surface-variant">
@@ -137,34 +194,50 @@ export default function App() {
 
   // Not signed in → show signup/login screen
   if (!isSignedIn) {
-    return <SignupScreen onComplete={handleSignupComplete} />
+    return (
+      <>
+        {networkOverlay}
+        <SignupScreen onComplete={handleSignupComplete} />
+      </>
+    )
   }
 
   // Signed in but no profile → show onboarding
   if (!profile) {
-    return <OnboardingForm onComplete={handleOnboardingComplete} />
+    return (
+      <>
+        {networkOverlay}
+        <OnboardingForm onComplete={handleOnboardingComplete} />
+      </>
+    )
   }
 
   // Signed in with profile → show screen based on active tab
+  let screen
   if (activeTab === "profile") {
-    return (
+    screen = (
       <ProfileScreen
         profile={profile}
         onProfileUpdate={handleProfileUpdate}
         onTabChange={handleTabChange}
       />
     )
-  }
-
-  if (activeTab === "tools") {
-    return <ToolsScreen onTabChange={handleTabChange} />
+  } else if (activeTab === "tools") {
+    screen = <ToolsScreen onTabChange={handleTabChange} />
+  } else {
+    screen = (
+      <DashboardLayout
+        name={profile.name}
+        edd={profile.edd}
+        onTabChange={handleTabChange}
+      />
+    )
   }
 
   return (
-    <DashboardLayout
-      name={profile.name}
-      edd={profile.edd}
-      onTabChange={handleTabChange}
-    />
+    <>
+      {networkOverlay}
+      {screen}
+    </>
   )
 }
