@@ -1,6 +1,7 @@
 import { createClerkClient, verifyToken } from '@clerk/backend'
 import dbConnect from './lib/mongodb.js'
 import Post from './models/Post.js'
+import Notification from './models/Notification.js'
 
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
 
@@ -55,6 +56,23 @@ export default async function handler(req, res) {
       const idx = post.likes.indexOf(clerkId)
       if (idx === -1) {
         post.likes.push(clerkId)
+        
+        // Add notification for the post author if it's not their own post
+        if (post.clerkId !== clerkId) {
+          try {
+            const user = await clerk.users.getUser(clerkId)
+            const actorName = user ? (user.firstName || 'משתמשת') : 'משתמשת'
+            await Notification.create({
+              clerkId: post.clerkId,
+              postId: post._id,
+              actorName,
+              type: 'like',
+              message: `${actorName} אהבה את הפוסט שלך!`
+            })
+          } catch (e) {
+            console.error("Failed to create notification for like", e)
+          }
+        }
       } else {
         post.likes.splice(idx, 1)
       }
@@ -77,6 +95,23 @@ export default async function handler(req, res) {
         createdAt: comment.createdAt || new Date().toISOString(),
       })
       post.commentsCount = post.comments.length
+      
+      // Add notification for the post author if it's not their own post
+      if (post.clerkId !== clerkId) {
+        try {
+          const actorName = comment.isAnonymous ? 'חברה אנונימית' : (comment.authorName || 'משתמשת')
+          await Notification.create({
+            clerkId: post.clerkId,
+            postId: post._id,
+            actorName,
+            type: 'comment',
+            message: `${actorName} הגיבה על הפוסט שלך: "${comment.text.substring(0, 30)}${comment.text.length > 30 ? '...' : ''}"`
+          })
+        } catch (e) {
+          console.error("Failed to create notification for comment", e)
+        }
+      }
+      
       await post.save()
       return res.json({ comments: post.comments, commentsCount: post.commentsCount })
     }

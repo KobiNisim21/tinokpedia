@@ -47,7 +47,58 @@ export default function App() {
     const updated = notifications.map(n => ({ ...n, read: true }))
     setNotifications(updated)
     try { localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)) } catch {}
+    
+    // Also mark read on backend
+    if (isSignedIn) {
+      getToken().then(token => {
+        if (token) {
+          fetch('/api/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ action: 'mark_read' })
+          }).catch(console.error)
+        }
+      })
+    }
   }
+
+  // Fetch backend notifications
+  useEffect(() => {
+    if (!isSignedIn) return
+    let mounted = true
+    async function fetchNotifs() {
+      try {
+        const token = await getToken()
+        if (!token) return
+        const res = await fetch('/api/notifications', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const backendNotifs = await res.json()
+          if (!mounted) return
+          
+          setNotifications(prev => {
+            const existingIds = new Set(prev.map(n => n.id))
+            const newNotifs = backendNotifs.filter(n => !existingIds.has(n.id))
+            if (newNotifs.length === 0) return prev
+            
+            const merged = [...newNotifs, ...prev].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            try { localStorage.setItem(NOTIF_KEY, JSON.stringify(merged)) } catch {}
+            return merged
+          })
+        }
+      } catch (err) {
+        console.error('Failed to fetch notifications', err)
+      }
+    }
+    fetchNotifs()
+    // Poll every 30 seconds
+    const interval = setInterval(fetchNotifs, 30000)
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [isSignedIn, getToken])
 
   const unreadCount = notifications.filter(n => !n.read).length
 
