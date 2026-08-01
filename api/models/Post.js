@@ -6,7 +6,7 @@ const PostSchema = new mongoose.Schema({
   isAnonymous: { type: Boolean, default: false },
   week: { type: Number },
   trimester: { type: Number },
-  category: { type: String, enum: ['בדיקות וייעוץ', 'חוויות ושיח', 'הטרימסטר שלי'] },
+  category: { type: String, enum: ['בדיקות וייעוץ', 'חוויות ושיח', 'הטרימסטר שלי', 'כללי'] },
   content: { type: String, required: true },
   likes: { type: [String], default: [] },
   comments: { type: [{

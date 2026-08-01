@@ -19,12 +19,12 @@ const TOOLS = [
  * 2. Contraction Timer (טיימר צירים)
  * 3. Hospital Bag Checklist (תיק לידה)
  */
-export default function ToolsScreen({ onTabChange }) {
+export default function ToolsScreen({ onTabChange, notificationProps = {} }) {
   const [activeTool, setActiveTool] = useState("kicks")
 
   return (
     <div className="flex min-h-screen flex-col md:items-center">
-      <Header />
+      <Header {...notificationProps} />
 
       <main className="mx-auto flex w-full max-w-[600px] flex-1 flex-col gap-stack-gap px-margin-mobile py-6 pb-24 md:pb-6">
         {/* Page title */}

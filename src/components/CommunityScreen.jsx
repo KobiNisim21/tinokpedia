@@ -6,7 +6,7 @@ import CreatePostModal from "./CreatePostModal"
 import PostCommentsModal from "./PostCommentsModal"
 import { pregnancyStatus } from "../utils/pregnancy"
 
-const CATEGORIES = ["הכל", "הטרימסטר שלי", "בדיקות וייעוץ", "חוויות ושיח"]
+const CATEGORIES = ["הכל", "הטרימסטר שלי", "בדיקות וייעוץ", "חוויות ושיח", "כללי"]
 
 const AVATAR_COLORS = [
   "bg-secondary-container text-on-secondary-container",
@@ -44,7 +44,7 @@ function timeAgo(dateStr) {
  *
  * Shows a post feed with filtering, like toggle, and post creation.
  */
-export default function CommunityScreen({ onTabChange, edd }) {
+export default function CommunityScreen({ onTabChange, edd, notificationProps = {} }) {
   const { user } = useUser()
   const { getToken } = useAuth()
 
@@ -77,6 +77,13 @@ export default function CommunityScreen({ onTabChange, edd }) {
 
   // Fetch posts
   const fetchPosts = useCallback(async () => {
+    // Build a client-side filter function (used for local posts too)
+    function matchesFilter(p) {
+      if (activeCategory === "הכל") return true
+      if (activeCategory === "הטרימסטר שלי") return status ? p.trimester === status.trimester : true
+      return p.category === activeCategory
+    }
+
     try {
       const params = new URLSearchParams()
       if (activeCategory !== "הכל" && activeCategory !== "הטרימסטר שלי") {
@@ -91,9 +98,9 @@ export default function CommunityScreen({ onTabChange, edd }) {
         // Merge with any local-only posts (that haven't synced yet)
         const localPosts = loadLocalPosts()
         const apiIds = new Set(apiPosts.map((p) => p._id || p.id))
-        const localOnly = localPosts.filter(
-          (p) => !apiIds.has(p._id || p.id)
-        )
+        const localOnly = localPosts
+          .filter((p) => !apiIds.has(p._id || p.id))
+          .filter(matchesFilter)
         setPosts([...localOnly, ...apiPosts])
         setLoadingPosts(false)
         return
@@ -101,8 +108,8 @@ export default function CommunityScreen({ onTabChange, edd }) {
     } catch {
       // API unreachable — use localStorage fallback
     }
-    // Fallback: show local posts
-    setPosts(loadLocalPosts())
+    // Fallback: show local posts with filtering
+    setPosts(loadLocalPosts().filter(matchesFilter))
     setLoadingPosts(false)
   }, [activeCategory, status])
 
@@ -111,7 +118,7 @@ export default function CommunityScreen({ onTabChange, edd }) {
   }, [fetchPosts])
 
   // Create post
-  async function handleCreatePost({ content, isAnonymous }) {
+  async function handleCreatePost({ content, isAnonymous, category }) {
     setPosting(true)
 
     const localPost = {
@@ -124,7 +131,7 @@ export default function CommunityScreen({ onTabChange, edd }) {
         : user?.fullName || user?.firstName || "משתמשת",
       week: status?.week ?? 0,
       trimester: status?.trimester ?? 1,
-      category: "חוויות ושיח",
+      category: category || "חוויות ושיח",
       likes: [],
       commentsCount: 0,
       createdAt: new Date().toISOString(),
@@ -249,7 +256,7 @@ export default function CommunityScreen({ onTabChange, edd }) {
 
   return (
     <div className="flex min-h-screen flex-col md:items-center">
-      <Header />
+      <Header {...notificationProps} />
 
       <main className="mx-auto flex w-full max-w-[600px] flex-1 flex-col gap-stack-gap px-margin-mobile pt-20 pb-24 md:pb-6">
         {/* Header section */}

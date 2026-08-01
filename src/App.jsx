@@ -6,6 +6,7 @@ import DashboardLayout from "./components/DashboardLayout"
 import ProfileScreen from "./components/ProfileScreen"
 import ToolsScreen from "./components/ToolsScreen"
 import CommunityScreen from "./components/CommunityScreen"
+import NotificationsModal from "./components/NotificationsModal"
 import { syncUserProfile, getUserProfile } from "./services/api"
 
 /**
@@ -24,6 +25,37 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("tracking") // "tracking" | "profile"
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [showOnlineToast, setShowOnlineToast] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+
+  // Notifications — persisted in localStorage
+  const NOTIF_KEY = "tinokpedia_notifications"
+  function loadNotifications() {
+    try {
+      const raw = localStorage.getItem(NOTIF_KEY)
+      return raw ? JSON.parse(raw) : []
+    } catch { return [] }
+  }
+  const [notifications, setNotifications] = useState(loadNotifications)
+
+  function addNotification(notif) {
+    const updated = [{ ...notif, id: notif.id || `n_${Date.now()}`, read: false, createdAt: notif.createdAt || new Date().toISOString() }, ...notifications]
+    setNotifications(updated)
+    try { localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)) } catch {}
+  }
+
+  function markAllRead() {
+    const updated = notifications.map(n => ({ ...n, read: true }))
+    setNotifications(updated)
+    try { localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)) } catch {}
+  }
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  const notificationProps = {
+    onNotificationsClick: () => setShowNotifications(true),
+    unreadCount,
+    onAddNotification: addNotification,
+  }
 
   // Online / offline listener
   useEffect(() => {
@@ -221,18 +253,20 @@ export default function App() {
         profile={profile}
         onProfileUpdate={handleProfileUpdate}
         onTabChange={handleTabChange}
+        notificationProps={notificationProps}
       />
     )
   } else if (activeTab === "tools") {
-    screen = <ToolsScreen onTabChange={handleTabChange} />
+    screen = <ToolsScreen onTabChange={handleTabChange} notificationProps={notificationProps} />
   } else if (activeTab === "community") {
-    screen = <CommunityScreen onTabChange={handleTabChange} edd={profile.edd} />
+    screen = <CommunityScreen onTabChange={handleTabChange} edd={profile.edd} notificationProps={notificationProps} />
   } else {
     screen = (
       <DashboardLayout
         name={profile.name}
         edd={profile.edd}
         onTabChange={handleTabChange}
+        notificationProps={notificationProps}
       />
     )
   }
@@ -241,6 +275,12 @@ export default function App() {
     <>
       {networkOverlay}
       {screen}
+      <NotificationsModal
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        onMarkAllRead={markAllRead}
+      />
     </>
   )
 }

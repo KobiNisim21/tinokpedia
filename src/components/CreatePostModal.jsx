@@ -1,23 +1,27 @@
 import { useState } from "react"
 
+const POST_CATEGORIES = ["חוויות ושיח", "בדיקות וייעוץ", "הטרימסטר שלי", "כללי"]
+
 /**
  * CreatePostModal — Bottom sheet for creating a new community post.
  *
  * Props:
  *  - isOpen (boolean)
  *  - onClose (function)
- *  - onSubmit (function) — called with { content, isAnonymous }
+ *  - onSubmit (function) — called with { content, isAnonymous, category }
  *  - loading (boolean) — disables submit while saving
  */
 export default function CreatePostModal({ isOpen, onClose, onSubmit, loading }) {
   const [content, setContent] = useState("")
   const [isAnonymous, setIsAnonymous] = useState(false)
+  const [category, setCategory] = useState("חוויות ושיח")
 
   function handleSubmit() {
     if (!content.trim() || loading) return
-    onSubmit({ content: content.trim(), isAnonymous })
+    onSubmit({ content: content.trim(), isAnonymous, category })
     setContent("")
     setIsAnonymous(false)
+    setCategory("חוויות ושיח")
   }
 
   if (!isOpen) return null
@@ -58,6 +62,29 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit, loading }) 
           dir="rtl"
         />
 
+        {/* Category selection chips */}
+        <div className="flex flex-col gap-2">
+          <span className="font-assistant text-body-sm text-on-surface-variant">
+            קטגוריה
+          </span>
+          <div className="hide-scrollbar flex gap-2 overflow-x-auto">
+            {POST_CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                className={`whitespace-nowrap rounded-full px-4 py-1.5 font-label-caps text-label-caps transition-all ${
+                  category === cat
+                    ? "bg-primary-container text-on-primary-container"
+                    : "border border-surface-container-highest bg-white text-slate-500"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Anonymous toggle */}
         <div className="flex items-center justify-between py-2">
           <span className="font-body-base text-body-base text-slate-600">
@@ -79,7 +106,7 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit, loading }) 
           type="button"
           onClick={handleSubmit}
           disabled={!content.trim() || loading}
-          className="mt-2 w-full rounded-full bg-primary py-4 font-headline-xl text-headline-xl text-white transition-colors duration-200 hover:bg-on-primary-container active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-2 w-full rounded-full bg-primary py-4 font-headline-xl text-headline-xl text-white transition-colors duration-200 hover:bg-on-primary-container active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "מפרסמת..." : "פרסום בקהילה"}
         </button>

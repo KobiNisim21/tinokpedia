@@ -31,7 +31,7 @@ function greetingForHour(hour) {
  * The weekly tracking screen. Receives the user's name and estimated due date
  * (EDD) and derives the current week/day/progress from it.
  */
-export default function DashboardLayout({ name = "את", edd, onTabChange }) {
+export default function DashboardLayout({ name = "את", edd, onTabChange, notificationProps = {} }) {
   const status = pregnancyStatus(edd)
   const { week, day, daysToDue, progress } = status
 
@@ -74,7 +74,7 @@ export default function DashboardLayout({ name = "את", edd, onTabChange }) {
 
   return (
     <div className="flex min-h-screen flex-col md:items-center">
-      <Header />
+      <Header {...notificationProps} />
 
       <main className="mx-auto flex w-full max-w-[600px] flex-1 flex-col gap-stack-gap px-margin-mobile py-6 pb-24 md:pb-6">
         {/* Greeting */}

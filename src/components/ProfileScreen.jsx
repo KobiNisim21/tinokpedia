@@ -54,7 +54,7 @@ function formatDate(date) {
  * Displays user info, pregnancy details, edit capability, and sign-out.
  * Matches the app's design language (RTL, Heebo/Assistant, primary-container accents).
  */
-export default function ProfileScreen({ profile, onProfileUpdate, onTabChange }) {
+export default function ProfileScreen({ profile, onProfileUpdate, onTabChange, notificationProps = {} }) {
   const { user } = useUser()
   const { getToken } = useAuth()
   const { signOut } = useClerk()
@@ -151,7 +151,7 @@ export default function ProfileScreen({ profile, onProfileUpdate, onTabChange })
 
   return (
     <div className="flex min-h-screen flex-col md:items-center">
-      <Header />
+      <Header {...notificationProps} />
 
       <main className="mx-auto flex w-full max-w-[600px] flex-1 flex-col gap-stack-gap px-margin-mobile py-6 pb-24 md:pb-6">
 

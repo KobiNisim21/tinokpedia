@@ -1,38 +1,39 @@
 /**
  * Header — סרגל עליון קבוע (Top App Bar)
- * Avatar + Tinokpedia wordmark + settings button.
+ * Menu button + Tinokpedia wordmark + notification bell with unread badge.
  * Matches the dashboard prototype: sticky, white surface, soft shadow.
  */
-export default function Header({ avatarSrc, onSettingsClick }) {
+export default function Header({ onNotificationsClick, unreadCount = 0 }) {
   return (
     <header className="sticky top-0 z-50 w-full bg-white soft-shadow">
       <div className="mx-auto flex h-16 max-w-[600px] items-center justify-between px-margin-mobile">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 overflow-hidden rounded-full bg-surface-container-high">
-            {avatarSrc ? (
-              <img
-                src={avatarSrc}
-                alt="תמונת פרופיל"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
-                <span className="material-symbols-outlined text-[20px]">person</span>
-              </div>
-            )}
-          </div>
-          <h1 className="font-heebo text-headline-xl font-bold text-primary">
-            Tinokpedia
-          </h1>
-        </div>
-
+        {/* Left — notification bell */}
         <button
           type="button"
-          onClick={onSettingsClick}
-          aria-label="הגדרות"
-          className="flex items-center justify-center rounded-full p-2 text-on-surface-variant transition-colors transition-transform hover:bg-surface-container-low active:scale-95"
+          onClick={onNotificationsClick}
+          aria-label="התראות"
+          className="relative flex items-center justify-center rounded-full p-2 text-primary transition-colors hover:bg-surface-container-low active:scale-95"
         >
-          <span className="material-symbols-outlined">settings</span>
+          <span className="material-symbols-outlined">notifications_none</span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error animate-pulse">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+
+        {/* Center — wordmark */}
+        <h1 className="font-heebo text-headline-xl font-bold text-primary">
+          Tinokpedia
+        </h1>
+
+        {/* Right — menu */}
+        <button
+          type="button"
+          aria-label="תפריט"
+          className="flex items-center justify-center rounded-full p-2 text-primary transition-colors hover:bg-surface-container-low active:scale-95"
+        >
+          <span className="material-symbols-outlined">menu</span>
         </button>
       </div>
     </header>
