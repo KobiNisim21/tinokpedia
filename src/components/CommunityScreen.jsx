@@ -149,9 +149,16 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
         setPosting(false)
         setIsModalOpen(false)
         return
+      } else {
+        const err = await res.json().catch(() => ({}))
+        console.error("API Error creating post:", err)
+        alert("שגיאה בפרסום הפוסט: " + (err.error || "Server Error"))
+        setPosting(false)
+        return
       }
-    } catch {
-      // API unreachable — proceed to local fallback
+    } catch (error) {
+      console.error("Network error creating post:", error)
+      // API unreachable (network error) — proceed to local fallback
     }
 
     // Offline fallback
