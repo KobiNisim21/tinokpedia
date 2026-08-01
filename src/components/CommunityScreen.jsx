@@ -95,13 +95,8 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
       const res = await fetch(`/api/posts?${params.toString()}`)
       if (res.ok) {
         const apiPosts = await res.json()
-        // Merge with any local-only posts (that haven't synced yet)
-        const localPosts = loadLocalPosts()
-        const apiIds = new Set(apiPosts.map((p) => p._id || p.id))
-        const localOnly = localPosts
-          .filter((p) => !apiIds.has(p._id || p.id))
-          .filter(matchesFilter)
-        setPosts([...localOnly, ...apiPosts])
+        setPosts(apiPosts)
+        saveAllPostsToLS(apiPosts) // keep fallback cache in sync
         setLoadingPosts(false)
         return
       }
@@ -121,9 +116,7 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
   async function handleCreatePost({ content, isAnonymous, category }) {
     setPosting(true)
 
-    const localPost = {
-      _id: `local_${Date.now()}`,
-      clerkId: user?.id,
+    const payload = {
       content,
       isAnonymous,
       authorName: isAnonymous
@@ -132,9 +125,6 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
       week: status?.week ?? 0,
       trimester: status?.trimester ?? 1,
       category: category || "חוויות ושיח",
-      likes: [],
-      commentsCount: 0,
-      createdAt: new Date().toISOString(),
     }
 
     try {
@@ -145,23 +135,36 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(localPost),
+        body: JSON.stringify(payload),
       })
+      
       if (res.ok) {
         const savedPost = await res.json()
-        setPosts((prev) => [savedPost, ...prev])
-      } else {
-        // API returned error — save locally and show anyway
-        saveLocalPost(localPost)
-        setPosts((prev) => [localPost, ...prev])
+        setPosts((prev) => {
+          const updated = [savedPost, ...prev]
+          saveAllPostsToLS(updated)
+          return updated
+        })
+        setActiveCategory("הכל")
+        setPosting(false)
+        setIsModalOpen(false)
+        return
       }
     } catch {
-      // Network error — save locally and show anyway
-      saveLocalPost(localPost)
-      setPosts((prev) => [localPost, ...prev])
+      // API unreachable — proceed to local fallback
     }
 
-    // Switch to "הכל" so the user always sees their new post
+    // Offline fallback
+    const localPost = {
+      _id: `local_${Date.now()}`,
+      clerkId: user?.id,
+      ...payload,
+      likes: [],
+      commentsCount: 0,
+      createdAt: new Date().toISOString(),
+    }
+    saveLocalPost(localPost)
+    setPosts((prev) => [localPost, ...prev])
     setActiveCategory("הכל")
     setPosting(false)
     setIsModalOpen(false)
@@ -174,10 +177,37 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
     } catch { /* ignore */ }
   }
 
-  // Toggle like — optimistic + localStorage + background API
+  // Toggle like
   async function handleLike(postId) {
     const uid = user?.id || "current_user"
 
+    // Primary: API sync
+    try {
+      const token = await getToken()
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: "like", postId }),
+      })
+      if (res.ok) {
+        const { likes } = await res.json()
+        setPosts((prev) => {
+          const updated = prev.map((p) =>
+            (p._id || p.id) === postId ? { ...p, likes } : p
+          )
+          saveAllPostsToLS(updated)
+          return updated
+        })
+        return
+      }
+    } catch {
+      // API unreachable — proceed to local fallback
+    }
+
+    // Offline fallback
     const updatedPosts = posts.map((p) => {
       if ((p._id || p.id) !== postId) return p
       const liked = p.likes?.includes(uid)
@@ -190,22 +220,9 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
     })
     setPosts(updatedPosts)
     saveAllPostsToLS(updatedPosts)
-
-    // Background API call — swallow errors
-    try {
-      const token = await getToken()
-      await fetch("/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: "like", postId }),
-      })
-    } catch { /* local dev — ignore */ }
   }
 
-  // Add comment — optimistic + localStorage + background API
+  // Add comment
   async function handleAddComment({ postId, text, isAnonymous }) {
     const newComment = {
       id: `c_${Date.now()}`,
@@ -217,6 +234,40 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
       createdAt: new Date().toISOString(),
     }
 
+    // Primary: API sync
+    try {
+      const token = await getToken()
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: "comment", postId, comment: newComment }),
+      })
+      if (res.ok) {
+        const { comments, commentsCount } = await res.json()
+        
+        setPosts((prev) => {
+          const updated = prev.map((p) =>
+            (p._id || p.id) === postId ? { ...p, comments, commentsCount } : p
+          )
+          saveAllPostsToLS(updated)
+          return updated
+        })
+
+        // Keep modal in sync
+        setCommentsPost((prev) => {
+          if (!prev || (prev._id || prev.id) !== postId) return prev
+          return { ...prev, comments, commentsCount }
+        })
+        return
+      }
+    } catch {
+      // API unreachable — proceed to local fallback
+    }
+
+    // Offline fallback
     const updatedPosts = posts.map((p) => {
       if ((p._id || p.id) !== postId) return p
       return {
@@ -228,7 +279,6 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
     setPosts(updatedPosts)
     saveAllPostsToLS(updatedPosts)
 
-    // Keep commentsPost in sync so modal re-renders
     setCommentsPost((prev) => {
       if (!prev || (prev._id || prev.id) !== postId) return prev
       return {
@@ -237,19 +287,6 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
         commentsCount: (prev.commentsCount || 0) + 1,
       }
     })
-
-    // Background API call
-    try {
-      const token = await getToken()
-      await fetch("/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: "comment", postId, comment: newComment }),
-      })
-    } catch { /* local dev — ignore */ }
   }
 
   const clerkId = user?.id || "current_user"
