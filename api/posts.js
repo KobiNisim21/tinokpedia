@@ -6,9 +6,20 @@ const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
 
 async function verifyAuth(req) {
   const token = req.headers.authorization?.replace('Bearer ', '')
-  if (!token) throw new Error('No token')
-  const { sub } = await clerk.verifyToken(token)
-  return sub
+  if (!token || token === 'null' || token === 'undefined') {
+    console.error("verifyAuth: No valid token provided in headers:", req.headers.authorization)
+    throw new Error('No token')
+  }
+  if (!process.env.CLERK_SECRET_KEY) {
+    console.error("verifyAuth: CLERK_SECRET_KEY is missing from environment variables!")
+  }
+  try {
+    const verified = await clerk.verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY })
+    return verified.sub
+  } catch (err) {
+    console.error("verifyAuth: verifyToken failed:", err.message, err)
+    throw err
+  }
 }
 
 export default async function handler(req, res) {
@@ -29,8 +40,8 @@ export default async function handler(req, res) {
     let clerkId
     try {
       clerkId = await verifyAuth(req)
-    } catch {
-      return res.status(401).json({ error: 'Unauthorized' })
+    } catch (err) {
+      return res.status(401).json({ error: `Unauthorized: ${err.message}` })
     }
 
     const { action } = req.body
