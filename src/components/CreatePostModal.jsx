@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 const POST_CATEGORIES = ["חוויות ושיח", "בדיקות וייעוץ", "הטרימסטר שלי", "כללי"]
 
@@ -10,18 +10,28 @@ const POST_CATEGORIES = ["חוויות ושיח", "בדיקות וייעוץ", "
  *  - onClose (function)
  *  - onSubmit (function) — called with { content, isAnonymous, category }
  *  - loading (boolean) — disables submit while saving
+ *  - initialPost (object) — if provided, opens in edit mode
  */
-export default function CreatePostModal({ isOpen, onClose, onSubmit, loading }) {
+export default function CreatePostModal({ isOpen, onClose, onSubmit, loading, initialPost }) {
   const [content, setContent] = useState("")
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [category, setCategory] = useState("חוויות ושיח")
 
+  useEffect(() => {
+    if (initialPost && isOpen) {
+      setContent(initialPost.content || "")
+      setIsAnonymous(initialPost.isAnonymous || false)
+      setCategory(initialPost.category || "חוויות ושיח")
+    } else if (!isOpen) {
+      setContent("")
+      setIsAnonymous(false)
+      setCategory("חוויות ושיח")
+    }
+  }, [initialPost, isOpen])
+
   function handleSubmit() {
     if (!content.trim() || loading) return
     onSubmit({ content: content.trim(), isAnonymous, category })
-    setContent("")
-    setIsAnonymous(false)
-    setCategory("חוויות ושיח")
   }
 
   if (!isOpen) return null
@@ -108,7 +118,7 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit, loading }) 
           disabled={!content.trim() || loading}
           className="mt-2 w-full rounded-full bg-primary py-4 font-headline-xl text-headline-xl text-white transition-colors duration-200 hover:bg-on-primary-container active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "מפרסמת..." : "פרסום בקהילה"}
+          {loading ? (initialPost ? "שומר..." : "מפרסמת...") : (initialPost ? "שמירת שינויים" : "פרסום בקהילה")}
         </button>
       </div>
     </div>

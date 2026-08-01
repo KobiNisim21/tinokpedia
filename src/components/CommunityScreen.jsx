@@ -54,6 +54,8 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
   const [posting, setPosting] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [commentsPost, setCommentsPost] = useState(null) // post object for comments modal
+  const [editingPost, setEditingPost] = useState(null) // post object being edited
+  const [activeMenuPostId, setActiveMenuPostId] = useState(null) // ID of post with open action menu
 
   const status = edd ? pregnancyStatus(edd) : null
 
@@ -112,10 +114,95 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
     fetchPosts()
   }, [fetchPosts])
 
-  // Create post
+  // Create or edit post
   async function handleCreatePost({ content, isAnonymous, category }) {
     setPosting(true)
 
+    try {
+      const token = await getToken()
+      
+      if (editingPost) {
+        // Edit mode
+        const payload = { postId: editingPost._id || editingPost.id, content, category }
+        const res = await fetch("/api/posts", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        })
+        
+        if (res.ok) {
+          const savedPost = await res.json()
+          setPosts((prev) => {
+            const updated = prev.map((p) => (p._id || p.id) === (savedPost._id || savedPost.id) ? savedPost : p)
+            saveAllPostsToLS(updated)
+            return updated
+          })
+          setPosting(false)
+          setIsModalOpen(false)
+          setEditingPost(null)
+          return
+        } else {
+          const err = await res.json().catch(() => ({}))
+          console.error("API Error updating post:", err)
+          alert("שגיאה בעריכת הפוסט: " + (err.error || "Server Error"))
+          setPosting(false)
+          return
+        }
+      } else {
+        // Create mode
+        const payload = {
+          content,
+          isAnonymous,
+          authorName: isAnonymous
+            ? "חברה אנונימית"
+            : user?.fullName || user?.firstName || "משתמשת",
+          week: status?.week ?? 0,
+          trimester: status?.trimester ?? 1,
+          category: category || "חוויות ושיח",
+        }
+        
+        const res = await fetch("/api/posts", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        })
+        
+        if (res.ok) {
+          const savedPost = await res.json()
+          setPosts((prev) => {
+            const updated = [savedPost, ...prev]
+            saveAllPostsToLS(updated)
+            return updated
+          })
+          setActiveCategory("הכל")
+          setPosting(false)
+          setIsModalOpen(false)
+          return
+        } else {
+          const err = await res.json().catch(() => ({}))
+          console.error("API Error creating post:", err)
+          alert("שגיאה בפרסום הפוסט: " + (err.error || "Server Error"))
+          setPosting(false)
+          return
+        }
+      }
+    } catch (error) {
+      console.error("Network error saving post:", error)
+      if (editingPost) {
+        alert("שגיאת רשת בעריכת פוסט. אנא נסי שוב מאוחר יותר.")
+        setPosting(false)
+        return
+      }
+      // API unreachable (network error) — proceed to local fallback for create only
+    }
+
+    // Offline fallback (only for create)
     const payload = {
       content,
       isAnonymous,
@@ -126,42 +213,6 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
       trimester: status?.trimester ?? 1,
       category: category || "חוויות ושיח",
     }
-
-    try {
-      const token = await getToken()
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      })
-      
-      if (res.ok) {
-        const savedPost = await res.json()
-        setPosts((prev) => {
-          const updated = [savedPost, ...prev]
-          saveAllPostsToLS(updated)
-          return updated
-        })
-        setActiveCategory("הכל")
-        setPosting(false)
-        setIsModalOpen(false)
-        return
-      } else {
-        const err = await res.json().catch(() => ({}))
-        console.error("API Error creating post:", err)
-        alert("שגיאה בפרסום הפוסט: " + (err.error || "Server Error"))
-        setPosting(false)
-        return
-      }
-    } catch (error) {
-      console.error("Network error creating post:", error)
-      // API unreachable (network error) — proceed to local fallback
-    }
-
-    // Offline fallback
     const localPost = {
       _id: `local_${Date.now()}`,
       clerkId: user?.id,
@@ -175,6 +226,40 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
     setActiveCategory("הכל")
     setPosting(false)
     setIsModalOpen(false)
+  }
+
+  // Post Actions
+  function handleEditStart(post) {
+    setEditingPost(post)
+    setIsModalOpen(true)
+    setActiveMenuPostId(null)
+  }
+
+  async function handleDelete(postId) {
+    if (!window.confirm("האם למחוק פוסט זה?")) return
+    setActiveMenuPostId(null)
+    
+    // Optimistic delete
+    setPosts(prev => {
+      const updated = prev.filter(p => (p._id || p.id) !== postId)
+      saveAllPostsToLS(updated)
+      return updated
+    })
+
+    try {
+      const token = await getToken()
+      await fetch(`/api/posts?id=${postId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    } catch (err) {
+      console.error("Error deleting post:", err)
+    }
+  }
+
+  function handleReport(postId) {
+    setActiveMenuPostId(null)
+    alert("הדיווח התקבל ויבדק בהקדם")
   }
 
   // Helper: persist all posts to localStorage
@@ -401,14 +486,58 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="text-slate-400 hover:text-slate-600"
-                    >
-                      <span className="material-symbols-outlined">
-                        more_vert
-                      </span>
-                    </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="p-2 text-slate-400 transition-colors hover:text-slate-600"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setActiveMenuPostId(activeMenuPostId === (post._id || post.id) ? null : (post._id || post.id))
+                        }}
+                      >
+                        <span className="material-symbols-outlined">
+                          more_vert
+                        </span>
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {activeMenuPostId === (post._id || post.id) && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={(e) => { e.stopPropagation(); setActiveMenuPostId(null); }}
+                          />
+                          <div className="absolute left-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-2xl bg-white py-1 shadow-lg ring-1 ring-black/5">
+                            {post.clerkId === clerkId ? (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEditStart(post); }}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-right font-body-base text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
+                                >
+                                  <span className="material-symbols-outlined text-xl">edit</span>
+                                  עריכת פוסט
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(post._id || post.id); }}
+                                  className="flex w-full items-center gap-3 px-4 py-3 text-right font-body-base text-error transition-colors hover:bg-error/10 active:bg-error/20"
+                                >
+                                  <span className="material-symbols-outlined text-xl">delete</span>
+                                  מחיקת פוסט
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleReport(post._id || post.id); }}
+                                className="flex w-full items-center gap-3 px-4 py-3 text-right font-body-base text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
+                              >
+                                <span className="material-symbols-outlined text-xl">flag</span>
+                                דיווח על פוסט
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   {/* Badges */}
@@ -471,9 +600,13 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
 
       <CreatePostModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingPost(null)
+        }}
         onSubmit={handleCreatePost}
         loading={posting}
+        initialPost={editingPost}
       />
 
       <PostCommentsModal

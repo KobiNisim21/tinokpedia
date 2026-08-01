@@ -131,5 +131,50 @@ export default async function handler(req, res) {
     return res.status(201).json(post)
   }
 
+  // PUT /api/posts — edit post
+  if (req.method === 'PUT') {
+    let clerkId
+    try {
+      clerkId = await verifyAuth(req)
+    } catch (err) {
+      return res.status(401).json({ error: `Unauthorized: ${err.message}` })
+    }
+
+    const { postId, content, category } = req.body
+    if (!postId || !content) return res.status(400).json({ error: 'postId and content required' })
+    
+    const post = await Post.findById(postId)
+    if (!post) return res.status(404).json({ error: 'Post not found' })
+    if (post.clerkId !== clerkId) return res.status(403).json({ error: 'Forbidden' })
+    
+    post.content = content
+    if (category) post.category = category
+    await post.save()
+    
+    return res.json(post)
+  }
+
+  // DELETE /api/posts — delete post
+  if (req.method === 'DELETE') {
+    let clerkId
+    try {
+      clerkId = await verifyAuth(req)
+    } catch (err) {
+      return res.status(401).json({ error: `Unauthorized: ${err.message}` })
+    }
+
+    const { id: postId } = req.query
+    if (!postId) return res.status(400).json({ error: 'id required' })
+    
+    const post = await Post.findById(postId)
+    if (!post) return res.status(404).json({ error: 'Post not found' })
+    if (post.clerkId !== clerkId) return res.status(403).json({ error: 'Forbidden' })
+    
+    await Post.findByIdAndDelete(postId)
+    // Optional: Also delete notifications for this post? We'll leave it as is or clean it up if needed.
+    
+    return res.json({ success: true })
+  }
+
   return res.status(405).json({ error: 'Method not allowed' })
 }
