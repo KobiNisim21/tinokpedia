@@ -1,4 +1,4 @@
-import { createClerkClient } from '@clerk/backend'
+import { createClerkClient, verifyToken } from '@clerk/backend'
 import dbConnect from './lib/mongodb.js'
 import Post from './models/Post.js'
 
@@ -14,7 +14,7 @@ async function verifyAuth(req) {
     console.error("verifyAuth: CLERK_SECRET_KEY is missing from environment variables!")
   }
   try {
-    const verified = await clerk.verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY })
+    const verified = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY })
     return verified.sub
   } catch (err) {
     console.error("verifyAuth: verifyToken failed:", err.message, err)

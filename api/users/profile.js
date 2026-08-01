@@ -1,8 +1,6 @@
 import dbConnect from '../lib/mongodb.js';
 import User from '../models/User.js';
-import { createClerkClient } from '@clerk/backend';
-
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+import { verifyToken } from '@clerk/backend';
 
 export default async function handler(req, res) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -13,7 +11,7 @@ export default async function handler(req, res) {
 
   let clerkId;
   try {
-    const verified = await clerk.verifyToken(token);
+    const verified = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
     clerkId = verified.sub;
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
