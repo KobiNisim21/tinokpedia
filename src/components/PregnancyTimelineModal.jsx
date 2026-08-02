@@ -3,20 +3,20 @@ import { syncUserProfile } from "../services/api"
 import { useAuth } from "@clerk/clerk-react"
 
 const TESTS = [
-  { id: "nurse_10", startWeek: 10, endWeek: 12, title: "אחות ליווי הריון", color: "text-teal-600", border: "border-teal-400", side: "right" },
-  { id: "sakar_11", startWeek: 11, endWeek: 13, title: "בדיקת סקר שליש ראשון (שקיפות עורפית ובדיקת דם)", color: "text-purple-600", border: "border-purple-400", side: "left" },
-  { id: "skira_early_14", startWeek: 14, endWeek: 16, title: "סקירת מערכות מוקדמת", color: "text-pink-600", border: "border-pink-400", side: "right" },
-  { id: "nurse_16", startWeek: 16, endWeek: 19, title: "אחות ליווי הריון", color: "text-blue-600", border: "border-blue-400", side: "left" },
-  { id: "sakar_2_16", startWeek: 16, endWeek: 20, title: "סקר ביוכימי שני (חלבון עוברי)", color: "text-slate-600", border: "border-slate-400", side: "left", offsetLine: true },
-  { id: "doctor_18", startWeek: 18, endWeek: 20, title: "בדיקת רופא", color: "text-emerald-600", border: "border-emerald-400", side: "right" },
-  { id: "skira_late_21", startWeek: 21, endWeek: 24, title: "סקירת מערכות מאוחרת", color: "text-blue-500", border: "border-blue-300", side: "left" },
-  { id: "glucose_24", startWeek: 24, endWeek: 28, title: "בדיקת דם לאיתור סוכרת הריונית", color: "text-orange-600", border: "border-orange-400", side: "right" },
-  { id: "blood_24", startWeek: 24, endWeek: 28, title: "ספירת דם ותרבית שתן", color: "text-indigo-600", border: "border-indigo-400", side: "left" },
-  { id: "nurse_24", startWeek: 24, endWeek: 28, title: "אחות ליווי הריון", color: "text-teal-600", border: "border-teal-400", side: "right", offsetLine: true },
-  { id: "vaccine_27", startWeek: 27, endWeek: 36, title: "חיסון שעלת (טטנוס, דיפתריה, שעלת)", color: "text-green-600", border: "border-green-400", side: "left" },
-  { id: "nurse_27", startWeek: 27, endWeek: 31, title: "אחות ליווי הריון", color: "text-purple-600", border: "border-purple-400", side: "right" },
-  { id: "doctor_29", startWeek: 29, endWeek: 31, title: "בדיקת רופא", color: "text-blue-600", border: "border-blue-400", side: "left" },
-  { id: "doctor_39", startWeek: 39, endWeek: 40, title: "בדיקת רופא", color: "text-rose-600", border: "border-rose-400", side: "left" },
+  { id: "nurse_10", startWeek: 10, endWeek: 12, title: "אחות ליווי הריון", color: "text-teal-600", lineColor: "bg-teal-600", side: "right" },
+  { id: "sakar_11", startWeek: 11, endWeek: 13, title: "בדיקת סקר שליש ראשון (שקיפות עורפית ובדיקת דם)", color: "text-purple-600", lineColor: "bg-purple-600", side: "left" },
+  { id: "skira_early_14", startWeek: 14, endWeek: 16, title: "סקירת מערכות מוקדמת", color: "text-pink-600", lineColor: "bg-pink-600", side: "right" },
+  { id: "nurse_16", startWeek: 16, endWeek: 19, title: "אחות ליווי הריון", color: "text-blue-600", lineColor: "bg-blue-600", side: "left" },
+  { id: "sakar_2_16", startWeek: 16, endWeek: 20, title: "סקר ביוכימי שני (חלבון עוברי)", color: "text-slate-600", lineColor: "bg-slate-600", side: "left" },
+  { id: "doctor_18", startWeek: 18, endWeek: 20, title: "בדיקת רופא", color: "text-emerald-600", lineColor: "bg-emerald-600", side: "right" },
+  { id: "skira_late_21", startWeek: 21, endWeek: 24, title: "סקירת מערכות מאוחרת", color: "text-blue-500", lineColor: "bg-blue-500", side: "left" },
+  { id: "glucose_24", startWeek: 24, endWeek: 28, title: "בדיקת דם לאיתור סוכרת הריונית", color: "text-orange-600", lineColor: "bg-orange-600", side: "right" },
+  { id: "blood_24", startWeek: 24, endWeek: 28, title: "ספירת דם ותרבית שתן", color: "text-indigo-600", lineColor: "bg-indigo-600", side: "left" },
+  { id: "nurse_24", startWeek: 24, endWeek: 28, title: "אחות ליווי הריון", color: "text-teal-600", lineColor: "bg-teal-600", side: "right" },
+  { id: "vaccine_27", startWeek: 27, endWeek: 36, title: "חיסון שעלת (טטנוס, דיפתריה, שעלת)", color: "text-green-600", lineColor: "bg-green-600", side: "left" },
+  { id: "nurse_27", startWeek: 27, endWeek: 31, title: "אחות ליווי הריון", color: "text-purple-600", lineColor: "bg-purple-600", side: "right" },
+  { id: "doctor_29", startWeek: 29, endWeek: 31, title: "בדיקת רופא", color: "text-blue-600", lineColor: "bg-blue-600", side: "left" },
+  { id: "doctor_39", startWeek: 39, endWeek: 40, title: "בדיקת רופא", color: "text-rose-600", lineColor: "bg-rose-600", side: "left" },
 ]
 
 export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, setProfile }) {
@@ -136,7 +136,7 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
                         const isDone = completed[test.id]
                         const startDate = formatDate(getWeekDate(test.startWeek))
                         const endDate = formatDate(getWeekDate(test.endWeek))
-                        const lineColor = test.color.replace('text-', 'bg-')
+                        const lineColor = test.lineColor
                         
                         return (
                           <div key={test.id} className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'bg-slate-50 opacity-70' : 'hover:shadow-md'}`}>
@@ -184,7 +184,7 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
                         const isDone = completed[test.id]
                         const startDate = formatDate(getWeekDate(test.startWeek))
                         const endDate = formatDate(getWeekDate(test.endWeek))
-                        const lineColor = test.color.replace('text-', 'bg-')
+                        const lineColor = test.lineColor
                         
                         return (
                           <div key={test.id} className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'bg-slate-50 opacity-70' : 'hover:shadow-md'}`}>
