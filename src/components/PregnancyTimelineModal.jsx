@@ -81,7 +81,10 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
       try {
         const token = await getToken()
         const updated = await syncUserProfile(token, { ...profile, completedTests: arr })
-        setProfile(updated)
+        setProfile({
+          ...updated,
+          edd: new Date(updated.edd)
+        })
       } catch (err) {
         console.error("Failed to sync tests to backend", err)
       }
