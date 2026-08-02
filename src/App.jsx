@@ -292,6 +292,7 @@ export default function App() {
         <SignupScreen onComplete={handleSignupComplete} />
       </>
     )
+  }
   const handleMenuAction = (action) => {
     if (action === "timeline") setIsTimelineOpen(true)
     else if (action === "food") setIsFoodSafetyOpen(true)
