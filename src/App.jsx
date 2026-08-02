@@ -29,6 +29,11 @@ export default function App() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [showOnlineToast, setShowOnlineToast] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  
+  // UI Modals state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
+  const [isFoodSafetyOpen, setIsFoodSafetyOpen] = useState(false)
 
   // Notifications — persisted in localStorage
   const NOTIF_KEY = "tinokpedia_notifications"
@@ -287,13 +292,6 @@ export default function App() {
         <SignupScreen onComplete={handleSignupComplete} />
       </>
     )
-  }
-
-  // Signed in but no profile → show onboarding
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
-  const [isFoodSafetyOpen, setIsFoodSafetyOpen] = useState(false)
-
   const handleMenuAction = (action) => {
     if (action === "timeline") setIsTimelineOpen(true)
     else if (action === "food") setIsFoodSafetyOpen(true)
