@@ -119,52 +119,54 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
 
           {weeks.map(week => {
             const isCurrent = week === currentWeek
-            const leftTests = TESTS.filter(t => t.startWeek === week && t.side === 'left')
+            // In RTL, DOM order is right-to-left. 
+            // Col 1 = Physical Right (rightTests)
+            // Col 3 = Physical Left (leftTests)
             const rightTests = TESTS.filter(t => t.startWeek === week && t.side === 'right')
+            const leftTests = TESTS.filter(t => t.startWeek === week && t.side === 'left')
             
             return (
-              <div key={week} className="relative mb-4 grid grid-cols-[1fr_64px_1fr]">
+              <div key={week} className="relative mb-6 grid grid-cols-[1fr_64px_1fr]">
                 
-                {/* Left Side Tests */}
-                <div className="relative flex flex-col justify-center py-2 pr-4">
-                  {leftTests.length > 0 && (
-                    <>
-                      {/* Connecting Line */}
-                      <div className="absolute right-4 top-1/2 h-[2px] w-12 -translate-y-1/2 translate-x-full bg-cyan-300" />
-                      
-                      <div className="flex w-full flex-col gap-3">
-                        {leftTests.map((test) => {
-                          const isDone = completed[test.id]
-                          const startDate = formatDate(getWeekDate(test.startWeek))
-                          const endDate = formatDate(getWeekDate(test.endWeek))
-                          
-                          return (
-                            <div key={test.id} className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'bg-slate-50 opacity-70' : 'hover:shadow-md'}`}>
-                              <div className="flex items-start gap-2">
-                                <div className={`flex flex-col text-right w-full`}>
-                                  <h4 className={`font-body-base font-bold leading-tight ${isDone ? 'text-slate-500 line-through' : test.color}`}>
-                                    {test.title}
-                                  </h4>
-                                  <p className="mt-1 font-body-sm text-[11px] text-slate-500">
-                                    {startDate} <br/> עד {endDate}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => toggleTest(test.id)}
-                                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white'}`}
-                                >
-                                  {isDone && <span className="material-symbols-outlined text-[16px]">check</span>}
-                                </button>
+                {/* Physical Right Side Tests (Column 1) */}
+                <div className="relative flex flex-col justify-center py-2 pl-6">
+                  {rightTests.length > 0 && (
+                    <div className="flex w-full flex-col gap-4">
+                      {rightTests.map((test) => {
+                        const isDone = completed[test.id]
+                        const startDate = formatDate(getWeekDate(test.startWeek))
+                        const endDate = formatDate(getWeekDate(test.endWeek))
+                        const lineColor = test.color.replace('text-', 'bg-')
+                        
+                        return (
+                          <div key={test.id} className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'bg-slate-50 opacity-70' : 'hover:shadow-md'}`}>
+                            {/* Colored Connecting Line going LEFT to the center node */}
+                            <div className={`absolute left-0 top-1/2 h-[2px] w-6 -translate-x-full -translate-y-1/2 ${lineColor} ${isDone ? 'opacity-40' : 'opacity-100'}`} />
+                            
+                            <div className="flex items-start gap-2">
+                              <button
+                                onClick={() => toggleTest(test.id)}
+                                className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white'}`}
+                              >
+                                {isDone && <span className="material-symbols-outlined text-[16px]">check</span>}
+                              </button>
+                              <div className="flex w-full flex-col text-right">
+                                <h4 className={`font-body-base font-bold leading-tight ${isDone ? 'text-slate-500 line-through' : test.color}`}>
+                                  {test.title}
+                                </h4>
+                                <p className="mt-1 font-body-sm text-[11px] text-slate-500">
+                                  {startDate} <br/> עד {endDate}
+                                </p>
                               </div>
                             </div>
-                          )
-                        })}
-                      </div>
-                    </>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )}
                 </div>
 
-                {/* Central Week Node */}
+                {/* Central Week Node (Column 2) */}
                 <div className="relative flex items-center justify-center">
                   <div className={`relative z-10 flex h-16 w-16 items-center justify-center rounded-full text-center font-bold leading-tight text-white shadow-md transition-transform ${isCurrent ? 'scale-110 bg-rose-600 shadow-rose-200/50 ring-4 ring-rose-100' : 'bg-cyan-600'}`}>
                     <div className="flex flex-col">
@@ -174,42 +176,41 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
                   </div>
                 </div>
 
-                {/* Right Side Tests */}
-                <div className="relative flex flex-col justify-center py-2 pl-4">
-                  {rightTests.length > 0 && (
-                    <>
-                      {/* Connecting Line */}
-                      <div className="absolute left-4 top-1/2 h-[2px] w-12 -translate-x-full -translate-y-1/2 bg-cyan-300" />
-                      
-                      <div className="flex w-full flex-col gap-3">
-                        {rightTests.map((test) => {
-                          const isDone = completed[test.id]
-                          const startDate = formatDate(getWeekDate(test.startWeek))
-                          const endDate = formatDate(getWeekDate(test.endWeek))
-                          
-                          return (
-                            <div key={test.id} className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'bg-slate-50 opacity-70' : 'hover:shadow-md'}`}>
-                              <div className="flex items-start gap-2">
-                                <button
-                                  onClick={() => toggleTest(test.id)}
-                                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white'}`}
-                                >
-                                  {isDone && <span className="material-symbols-outlined text-[16px]">check</span>}
-                                </button>
-                                <div className={`flex flex-col text-left w-full`}>
-                                  <h4 className={`font-body-base font-bold leading-tight ${isDone ? 'text-slate-500 line-through' : test.color}`}>
-                                    {test.title}
-                                  </h4>
-                                  <p className="mt-1 font-body-sm text-[11px] text-slate-500">
-                                    {startDate} <br/> עד {endDate}
-                                  </p>
-                                </div>
+                {/* Physical Left Side Tests (Column 3) */}
+                <div className="relative flex flex-col justify-center py-2 pr-6">
+                  {leftTests.length > 0 && (
+                    <div className="flex w-full flex-col gap-4">
+                      {leftTests.map((test) => {
+                        const isDone = completed[test.id]
+                        const startDate = formatDate(getWeekDate(test.startWeek))
+                        const endDate = formatDate(getWeekDate(test.endWeek))
+                        const lineColor = test.color.replace('text-', 'bg-')
+                        
+                        return (
+                          <div key={test.id} className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'bg-slate-50 opacity-70' : 'hover:shadow-md'}`}>
+                            {/* Colored Connecting Line going RIGHT to the center node */}
+                            <div className={`absolute right-0 top-1/2 h-[2px] w-6 translate-x-full -translate-y-1/2 ${lineColor} ${isDone ? 'opacity-40' : 'opacity-100'}`} />
+                            
+                            <div className="flex items-start gap-2">
+                              <div className="flex w-full flex-col text-left">
+                                <h4 className={`font-body-base font-bold leading-tight ${isDone ? 'text-slate-500 line-through' : test.color}`}>
+                                  {test.title}
+                                </h4>
+                                <p className="mt-1 font-body-sm text-[11px] text-slate-500">
+                                  {startDate} <br/> עד {endDate}
+                                </p>
                               </div>
+                              <button
+                                onClick={() => toggleTest(test.id)}
+                                className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white'}`}
+                              >
+                                {isDone && <span className="material-symbols-outlined text-[16px]">check</span>}
+                              </button>
                             </div>
-                          )
-                        })}
-                      </div>
-                    </>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )}
                 </div>
 
