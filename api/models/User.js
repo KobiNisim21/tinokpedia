@@ -25,6 +25,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['LMP', 'EDD'],
   },
+  completedTests: {
+    type: [String],
+    default: [],
+  },
   createdAt: {
     type: Date,
     default: Date.now,

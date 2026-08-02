@@ -7,6 +7,9 @@ import ProfileScreen from "./components/ProfileScreen"
 import ToolsScreen from "./components/ToolsScreen"
 import CommunityScreen from "./components/CommunityScreen"
 import NotificationsModal from "./components/NotificationsModal"
+import SideDrawer from "./components/SideDrawer"
+import PregnancyTimelineModal from "./components/PregnancyTimelineModal"
+import FoodSafetyModal from "./components/FoodSafetyModal"
 import { syncUserProfile, getUserProfile } from "./services/api"
 
 /**
@@ -287,6 +290,21 @@ export default function App() {
   }
 
   // Signed in but no profile → show onboarding
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
+  const [isFoodSafetyOpen, setIsFoodSafetyOpen] = useState(false)
+
+  const handleMenuAction = (action) => {
+    if (action === "timeline") setIsTimelineOpen(true)
+    else if (action === "food") setIsFoodSafetyOpen(true)
+    else if (action === "profile") setActiveTab("profile")
+  }
+
+  const enhancedNotificationProps = {
+    ...notificationProps,
+    onMenuClick: () => setIsDrawerOpen(true),
+  }
+
   if (!profile) {
     return (
       <>
@@ -304,20 +322,21 @@ export default function App() {
         profile={profile}
         onProfileUpdate={handleProfileUpdate}
         onTabChange={handleTabChange}
-        notificationProps={notificationProps}
+        notificationProps={enhancedNotificationProps}
       />
     )
   } else if (activeTab === "tools") {
-    screen = <ToolsScreen onTabChange={handleTabChange} notificationProps={notificationProps} />
+    screen = <ToolsScreen onTabChange={handleTabChange} notificationProps={enhancedNotificationProps} />
   } else if (activeTab === "community") {
-    screen = <CommunityScreen onTabChange={handleTabChange} edd={profile.edd} notificationProps={notificationProps} />
+    screen = <CommunityScreen onTabChange={handleTabChange} edd={profile.edd} notificationProps={enhancedNotificationProps} />
   } else {
     screen = (
       <DashboardLayout
         name={profile.name}
         edd={profile.edd}
         onTabChange={handleTabChange}
-        notificationProps={notificationProps}
+        notificationProps={enhancedNotificationProps}
+        onOpenTimeline={() => setIsTimelineOpen(true)}
       />
     )
   }
@@ -326,11 +345,33 @@ export default function App() {
     <>
       {networkOverlay}
       {screen}
+      
       <NotificationsModal
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
         notifications={notifications}
         onMarkAllRead={markAllRead}
+      />
+      
+      <SideDrawer 
+        isOpen={isDrawerOpen} 
+        onClose={() => setIsDrawerOpen(false)} 
+        user={user} 
+        edd={profile.edd} 
+        onNavigate={handleMenuAction} 
+      />
+      
+      <PregnancyTimelineModal 
+        isOpen={isTimelineOpen} 
+        onClose={() => setIsTimelineOpen(false)} 
+        edd={profile.edd} 
+        profile={profile}
+        setProfile={setProfile}
+      />
+      
+      <FoodSafetyModal 
+        isOpen={isFoodSafetyOpen} 
+        onClose={() => setIsFoodSafetyOpen(false)} 
       />
     </>
   )

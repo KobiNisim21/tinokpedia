@@ -31,7 +31,7 @@ function greetingForHour(hour) {
  * The weekly tracking screen. Receives the user's name and estimated due date
  * (EDD) and derives the current week/day/progress from it.
  */
-export default function DashboardLayout({ name = "את", edd, onTabChange, notificationProps = {} }) {
+export default function DashboardLayout({ name = "את", edd, onTabChange, notificationProps = {}, onOpenTimeline }) {
   const status = pregnancyStatus(edd)
   const { week, day, daysToDue, progress } = status
 
@@ -83,6 +83,29 @@ export default function DashboardLayout({ name = "את", edd, onTabChange, notif
             {greeting}, {name} 👋
           </h2>
         </div>
+
+        {/* Timeline Banner */}
+        <button 
+          onClick={onOpenTimeline}
+          className="group relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-500 to-cyan-500 p-4 text-right shadow-sm transition-all hover:shadow-md active:scale-95"
+        >
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="font-heebo text-body-lg font-bold text-white">
+                לוח בדיקות הריון 🩺
+              </span>
+              <span className="mt-1 font-body-sm text-cyan-50">
+                צפי בבדיקה הקרובה שלך
+              </span>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </div>
+          </div>
+          {/* Decorative background shapes */}
+          <div className="absolute -left-4 -top-8 h-24 w-24 rounded-full bg-white/10 blur-xl"></div>
+          <div className="absolute -bottom-10 right-10 h-20 w-20 rounded-full bg-white/10 blur-xl"></div>
+        </button>
 
         {/* PWA install prompt */}
         <PWAInstallBanner />
