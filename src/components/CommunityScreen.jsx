@@ -381,15 +381,72 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
     })
   }
 
+  const [pullDistance, setPullDistance] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [startY, setStartY] = useState(0)
+  const [isPulling, setIsPulling] = useState(false)
+
+  const handleTouchStart = (e) => {
+    if (window.scrollY <= 10) { // Allow slight tolerance
+      setStartY(e.touches[0].clientY)
+      setIsPulling(true)
+    }
+  }
+
+  const handleTouchMove = (e) => {
+    if (!isPulling || isRefreshing) return
+    const currentY = e.touches[0].clientY
+    const diff = currentY - startY
+    if (diff > 0) {
+      setPullDistance(Math.min(diff * 0.4, 80)) // resistance, cap at 80
+    } else {
+      setPullDistance(0)
+    }
+  }
+
+  const handleTouchEnd = async () => {
+    if (!isPulling) return
+    setIsPulling(false)
+    if (pullDistance > 65 && !isRefreshing) {
+      setIsRefreshing(true)
+      await fetchPosts()
+      setIsRefreshing(false)
+    }
+    setPullDistance(0)
+  }
+
   const clerkId = user?.id || "current_user"
 
   return (
     <div className="flex min-h-screen flex-col md:items-center">
       <Header {...notificationProps} />
 
-      <main className="mx-auto flex w-full max-w-[600px] flex-1 flex-col gap-stack-gap px-margin-mobile pt-20 pb-24 md:pb-6">
-        {/* Header section */}
-        <section className="mt-4 text-center">
+      <main 
+        className="mx-auto flex w-full max-w-[600px] flex-1 flex-col gap-stack-gap px-margin-mobile pt-4 pb-24 md:pb-6"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Pull-to-refresh Indicator */}
+        <div 
+          className="flex w-full items-end justify-center overflow-hidden transition-all duration-200 ease-out"
+          style={{ height: isRefreshing ? 60 : isPulling ? pullDistance : 0 }}
+        >
+          <div 
+            className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md"
+            style={{ 
+              transform: `rotate(${isRefreshing ? 0 : pullDistance * 5}deg) scale(${Math.max(0, Math.min(pullDistance / 65, 1))})`,
+              opacity: Math.min(pullDistance / 30, 1)
+            }}
+          >
+            <span className={`material-symbols-outlined text-primary ${isRefreshing ? "animate-spin" : ""}`}>
+              refresh
+            </span>
+          </div>
+        </div>
+
+        {/* Header section (reduced top spacing) */}
+        <section className="mt-1 text-center">
           <h2 className="mb-2 font-headline-3xl-mobile text-headline-3xl-mobile text-primary">
             קהילת האמהות
           </h2>
