@@ -119,58 +119,100 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
 
           {weeks.map(week => {
             const isCurrent = week === currentWeek
-            const weekTests = TESTS.filter(t => t.startWeek === week)
+            const leftTests = TESTS.filter(t => t.startWeek === week && t.side === 'left')
+            const rightTests = TESTS.filter(t => t.startWeek === week && t.side === 'right')
             
             return (
-              <div key={week} className="relative mb-16 flex items-center justify-center">
+              <div key={week} className="relative mb-4 grid grid-cols-[1fr_64px_1fr]">
                 
+                {/* Left Side Tests */}
+                <div className="relative flex flex-col justify-center py-2 pr-4">
+                  {leftTests.length > 0 && (
+                    <>
+                      {/* Connecting Line */}
+                      <div className="absolute right-4 top-1/2 h-[2px] w-12 -translate-y-1/2 translate-x-full bg-cyan-300" />
+                      
+                      <div className="flex w-full flex-col gap-3">
+                        {leftTests.map((test) => {
+                          const isDone = completed[test.id]
+                          const startDate = formatDate(getWeekDate(test.startWeek))
+                          const endDate = formatDate(getWeekDate(test.endWeek))
+                          
+                          return (
+                            <div key={test.id} className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'bg-slate-50 opacity-70' : 'hover:shadow-md'}`}>
+                              <div className="flex items-start gap-2">
+                                <div className={`flex flex-col text-right w-full`}>
+                                  <h4 className={`font-body-base font-bold leading-tight ${isDone ? 'text-slate-500 line-through' : test.color}`}>
+                                    {test.title}
+                                  </h4>
+                                  <p className="mt-1 font-body-sm text-[11px] text-slate-500">
+                                    {startDate} <br/> עד {endDate}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => toggleTest(test.id)}
+                                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white'}`}
+                                >
+                                  {isDone && <span className="material-symbols-outlined text-[16px]">check</span>}
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 {/* Central Week Node */}
-                <div className={`relative z-10 flex h-16 w-16 items-center justify-center rounded-full shadow-md text-white font-bold text-center leading-tight transition-transform ${isCurrent ? 'bg-rose-600 scale-110 shadow-rose-200/50 ring-4 ring-rose-100' : 'bg-cyan-600'}`}>
-                  <div className="flex flex-col">
-                    <span className="text-[12px] font-normal opacity-90">שבוע</span>
-                    <span className="text-xl">{week}</span>
+                <div className="relative flex items-center justify-center">
+                  <div className={`relative z-10 flex h-16 w-16 items-center justify-center rounded-full text-center font-bold leading-tight text-white shadow-md transition-transform ${isCurrent ? 'scale-110 bg-rose-600 shadow-rose-200/50 ring-4 ring-rose-100' : 'bg-cyan-600'}`}>
+                    <div className="flex flex-col">
+                      <span className="text-[12px] font-normal opacity-90">שבוע</span>
+                      <span className="text-xl">{week}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Tests for this week */}
-                {weekTests.map((test, idx) => {
-                  const isLeft = test.side === 'left'
-                  const isDone = completed[test.id]
-                  const startDate = formatDate(getWeekDate(test.startWeek))
-                  const endDate = formatDate(getWeekDate(test.endWeek))
-                  
-                  return (
-                    <div 
-                      key={test.id} 
-                      className={`absolute top-1/2 -translate-y-1/2 w-[calc(50%-40px)] flex flex-col ${isLeft ? 'left-0 items-start pr-4' : 'right-0 items-end pl-4'}`}
-                      style={{ marginTop: test.offsetLine ? '60px' : '0px' }}
-                    >
+                {/* Right Side Tests */}
+                <div className="relative flex flex-col justify-center py-2 pl-4">
+                  {rightTests.length > 0 && (
+                    <>
                       {/* Connecting Line */}
-                      <div className={`absolute top-1/2 h-[2px] w-8 bg-gradient-to-r ${isLeft ? 'right-0 from-transparent to-cyan-300' : 'left-0 from-cyan-300 to-transparent'}`} />
-
-                      {/* Card */}
-                      <div className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'opacity-70 bg-slate-50' : 'hover:shadow-md'}`}>
-                        <div className="flex items-start gap-2">
-                          <button
-                            onClick={() => toggleTest(test.id)}
-                            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white'}`}
-                          >
-                            {isDone && <span className="material-symbols-outlined text-[16px]">check</span>}
-                          </button>
+                      <div className="absolute left-4 top-1/2 h-[2px] w-12 -translate-x-full -translate-y-1/2 bg-cyan-300" />
+                      
+                      <div className="flex w-full flex-col gap-3">
+                        {rightTests.map((test) => {
+                          const isDone = completed[test.id]
+                          const startDate = formatDate(getWeekDate(test.startWeek))
+                          const endDate = formatDate(getWeekDate(test.endWeek))
                           
-                          <div className={`flex flex-col text-${isLeft ? 'right' : 'left'} w-full`}>
-                            <h4 className={`font-body-base font-bold leading-tight ${isDone ? 'text-slate-500 line-through' : test.color}`}>
-                              {test.title}
-                            </h4>
-                            <p className="mt-1 font-body-sm text-[11px] text-slate-500">
-                              {startDate} <br/> עד {endDate}
-                            </p>
-                          </div>
-                        </div>
+                          return (
+                            <div key={test.id} className={`relative w-full rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 transition-all ${isDone ? 'bg-slate-50 opacity-70' : 'hover:shadow-md'}`}>
+                              <div className="flex items-start gap-2">
+                                <button
+                                  onClick={() => toggleTest(test.id)}
+                                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white'}`}
+                                >
+                                  {isDone && <span className="material-symbols-outlined text-[16px]">check</span>}
+                                </button>
+                                <div className={`flex flex-col text-left w-full`}>
+                                  <h4 className={`font-body-base font-bold leading-tight ${isDone ? 'text-slate-500 line-through' : test.color}`}>
+                                    {test.title}
+                                  </h4>
+                                  <p className="mt-1 font-body-sm text-[11px] text-slate-500">
+                                    {startDate} <br/> עד {endDate}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                    </div>
-                  )
-                })}
+                    </>
+                  )}
+                </div>
+
               </div>
             )
           })}
