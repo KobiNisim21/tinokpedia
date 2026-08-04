@@ -29,7 +29,7 @@ export default function PostCommentsModal({
   onClose,
   post,
   onAddComment,
-  currentUserName,
+  currentUserName: _currentUserName,
 }) {
   const [text, setText] = useState("")
   const [isAnonymous, setIsAnonymous] = useState(false)

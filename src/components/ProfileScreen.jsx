@@ -1,9 +1,9 @@
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useUser, useAuth, useClerk } from "@clerk/clerk-react"
 import Header from "./Header"
 import BottomNav from "./BottomNav"
 import HebrewDatePicker from "./HebrewDatePicker"
-import { pregnancyStatus, eddFromInputs, parseDdMmYyyy, isoToDdMmYyyy } from "../utils/pregnancy"
+import { pregnancyStatus, eddFromInputs, parseDdMmYyyy } from "../utils/pregnancy"
 import { syncUserProfile } from "../services/api"
 
 /** Format raw digits into a dd/mm/yyyy mask as the user types. */
@@ -118,19 +118,24 @@ export default function ProfileScreen({ profile, onProfileUpdate, onTabChange, n
         },
       })
 
-      // Sync to MongoDB
+      let updatedProfile = {
+        ...profile,
+        name: editName.trim(),
+        edd,
+        calculationMethod,
+      }
+
       const token = await getToken()
       if (token) {
-        await syncUserProfile(token, {
+        updatedProfile = await syncUserProfile(token, {
           name: editName.trim(),
           edd: edd.toISOString(),
           calculationMethod,
-          email: user.primaryEmailAddress?.emailAddress,
+          completedTests: profile.completedTests || [],
         })
       }
 
-      // Update parent state so Dashboard reflects changes immediately
-      onProfileUpdate({ name: editName.trim(), edd })
+      onProfileUpdate(updatedProfile)
       setEditing(false)
     } catch (err) {
       console.error("Failed to update profile:", err)

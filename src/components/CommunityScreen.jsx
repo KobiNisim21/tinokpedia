@@ -5,6 +5,15 @@ import BottomNav from "./BottomNav"
 import CreatePostModal from "./CreatePostModal"
 import PostCommentsModal from "./PostCommentsModal"
 import { pregnancyStatus } from "../utils/pregnancy"
+import {
+  ApiRequestError,
+  apiRequest,
+  discardPendingLocalPost,
+  enqueueCommunityOperation,
+  flushCommunityQueue,
+  loadCachedPosts,
+  saveCachedPosts,
+} from "../services/communityQueue"
 
 const CATEGORIES = ["הכל", "הטרימסטר שלי", "בדיקות וייעוץ", "חוויות ושיח", "כללי"]
 
@@ -58,174 +67,198 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
   const [activeMenuPostId, setActiveMenuPostId] = useState(null) // ID of post with open action menu
 
   const status = edd ? pregnancyStatus(edd) : null
+  const currentTrimester = status?.trimester
+  const userId = user?.id
 
-  const LS_KEY = "tinokpedia_community_posts"
-
-  function loadLocalPosts() {
-    try {
-      const raw = localStorage.getItem(LS_KEY)
-      return raw ? JSON.parse(raw) : []
-    } catch {
-      return []
-    }
-  }
-
-  function saveLocalPost(post) {
-    try {
-      const existing = loadLocalPosts()
-      localStorage.setItem(LS_KEY, JSON.stringify([post, ...existing]))
-    } catch { /* quota exceeded — ignore */ }
-  }
+  const loadLocalPosts = useCallback(
+    () => loadCachedPosts(userId),
+    [userId],
+  )
+  const saveAllPostsToLS = useCallback(
+    (updatedPosts) => saveCachedPosts(userId, updatedPosts),
+    [userId],
+  )
 
   // Fetch posts
   const fetchPosts = useCallback(async () => {
     // Build a client-side filter function (used for local posts too)
     function matchesFilter(p) {
       if (activeCategory === "הכל") return true
-      if (activeCategory === "הטרימסטר שלי") return status ? p.trimester === status.trimester : true
+      if (activeCategory === "הטרימסטר שלי") return currentTrimester ? p.trimester === currentTrimester : true
       return p.category === activeCategory
     }
 
     try {
+      const token = await getToken()
+      if (!token || !userId) throw new Error("Missing session")
+      if (navigator.onLine) {
+        const { idMap, droppedLocalIds } = await flushCommunityQueue(userId, token)
+        const removableIds = new Set([...Object.keys(idMap), ...droppedLocalIds])
+        if (removableIds.size > 0) {
+          saveCachedPosts(
+            userId,
+            loadLocalPosts().filter((post) => !removableIds.has(post._id || post.id)),
+          )
+        }
+      }
+
       const params = new URLSearchParams()
       if (activeCategory !== "הכל" && activeCategory !== "הטרימסטר שלי") {
         params.set("category", activeCategory)
       }
-      if (activeCategory === "הטרימסטר שלי" && status) {
-        params.set("trimester", status.trimester)
+      if (activeCategory === "הטרימסטר שלי" && currentTrimester) {
+        params.set("trimester", currentTrimester)
       }
-      const res = await fetch(`/api/posts?${params.toString()}`)
-      if (res.ok) {
-        const apiPosts = await res.json()
-        setPosts(apiPosts)
-        saveAllPostsToLS(apiPosts) // keep fallback cache in sync
-        setLoadingPosts(false)
-        return
+      const apiPosts = await apiRequest(token, `/api/posts?${params.toString()}`)
+      const pendingPosts = loadLocalPosts().filter(
+        (post) => post.pendingSync && matchesFilter(post),
+      )
+      const merged = [...pendingPosts, ...apiPosts]
+      setPosts(merged)
+      if (activeCategory === "הכל") {
+        saveAllPostsToLS(merged)
+      } else {
+        const fetchedIds = new Set(apiPosts.map((post) => post._id || post.id))
+        const preserved = loadLocalPosts().filter((post) => {
+          const id = post._id || post.id
+          return !fetchedIds.has(id) && (post.pendingSync || !matchesFilter(post))
+        })
+        saveAllPostsToLS([...apiPosts, ...preserved])
       }
+      setLoadingPosts(false)
+      return
     } catch {
       // API unreachable — use localStorage fallback
     }
     // Fallback: show local posts with filtering
     setPosts(loadLocalPosts().filter(matchesFilter))
     setLoadingPosts(false)
-  }, [activeCategory, status])
+  }, [
+    activeCategory,
+    currentTrimester,
+    getToken,
+    loadLocalPosts,
+    saveAllPostsToLS,
+    userId,
+  ])
 
   useEffect(() => {
     fetchPosts()
   }, [fetchPosts])
 
-  // Create or edit post
+  useEffect(() => {
+    window.addEventListener("online", fetchPosts)
+    return () => window.removeEventListener("online", fetchPosts)
+  }, [fetchPosts])
+
+  function updatePosts(updater) {
+    setPosts((previous) => {
+      const updated = typeof updater === "function" ? updater(previous) : updater
+      saveAllPostsToLS(updated)
+      return updated
+    })
+  }
+
   async function handleCreatePost({ content, isAnonymous, category }) {
     setPosting(true)
+    if (editingPost) {
+      const postId = editingPost._id || editingPost.id
+      const previousPosts = posts
+      const payload = { postId, content, category }
+      updatePosts((current) =>
+        current.map((post) =>
+          (post._id || post.id) === postId
+            ? { ...post, content, category, pendingSync: true }
+            : post,
+        ),
+      )
+      setIsModalOpen(false)
+      setEditingPost(null)
 
-    try {
-      const token = await getToken()
-      
-      if (editingPost) {
-        // Edit mode
-        const payload = { postId: editingPost._id || editingPost.id, content, category }
-        const res = await fetch("/api/posts", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        })
-        
-        if (res.ok) {
-          const savedPost = await res.json()
-          setPosts((prev) => {
-            const updated = prev.map((p) => (p._id || p.id) === (savedPost._id || savedPost.id) ? savedPost : p)
-            saveAllPostsToLS(updated)
-            return updated
-          })
-          setPosting(false)
-          setIsModalOpen(false)
-          setEditingPost(null)
-          return
-        } else {
-          const err = await res.json().catch(() => ({}))
-          console.error("API Error updating post:", err)
-          alert("שגיאה בעריכת הפוסט: " + (err.error || "Server Error"))
-          setPosting(false)
-          return
-        }
-      } else {
-        // Create mode
-        const payload = {
-          content,
-          isAnonymous,
-          authorName: isAnonymous
-            ? "חברה אנונימית"
-            : user?.fullName || user?.firstName || "משתמשת",
-          week: status?.week ?? 0,
-          trimester: status?.trimester ?? 1,
-          category: category || "חוויות ושיח",
-        }
-        
-        const res = await fetch("/api/posts", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        })
-        
-        if (res.ok) {
-          const savedPost = await res.json()
-          setPosts((prev) => {
-            const updated = [savedPost, ...prev]
-            saveAllPostsToLS(updated)
-            return updated
-          })
-          setActiveCategory("הכל")
-          setPosting(false)
-          setIsModalOpen(false)
-          return
-        } else {
-          const err = await res.json().catch(() => ({}))
-          console.error("API Error creating post:", err)
-          alert("שגיאה בפרסום הפוסט: " + (err.error || "Server Error"))
-          setPosting(false)
-          return
-        }
-      }
-    } catch (error) {
-      console.error("Network error saving post:", error)
-      if (editingPost) {
-        alert("שגיאת רשת בעריכת פוסט. אנא נסי שוב מאוחר יותר.")
+      if (String(postId).startsWith("local_")) {
+        enqueueCommunityOperation(userId, { type: "edit", payload })
         setPosting(false)
         return
       }
-      // API unreachable (network error) — proceed to local fallback for create only
+
+      try {
+        const token = await getToken()
+        if (!token) throw new Error("Missing session")
+        const savedPost = await apiRequest(token, "/api/posts", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        updatePosts((current) =>
+          current.map((post) => (post._id || post.id) === postId ? savedPost : post),
+        )
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.status < 500) {
+          updatePosts(previousPosts)
+          alert("לא ניתן לשמור את עריכת הפוסט")
+        } else {
+          enqueueCommunityOperation(userId, { type: "edit", payload })
+        }
+      } finally {
+        setPosting(false)
+      }
+      return
     }
 
-    // Offline fallback (only for create)
     const payload = {
       content,
       isAnonymous,
+      week: status?.week ?? 0,
+      trimester: currentTrimester ?? 1,
+      category: category || "חוויות ושיח",
+    }
+    const localId = "local_" + Date.now()
+    const localPost = {
+      _id: localId,
+      ...payload,
       authorName: isAnonymous
         ? "חברה אנונימית"
         : user?.fullName || user?.firstName || "משתמשת",
-      week: status?.week ?? 0,
-      trimester: status?.trimester ?? 1,
-      category: category || "חוויות ושיח",
-    }
-    const localPost = {
-      _id: `local_${Date.now()}`,
-      clerkId: user?.id,
-      ...payload,
-      likes: [],
+      likesCount: 0,
+      likedByCurrentUser: false,
+      comments: [],
       commentsCount: 0,
       createdAt: new Date().toISOString(),
+      isOwner: true,
+      pendingSync: true,
     }
-    saveLocalPost(localPost)
-    setPosts((prev) => [localPost, ...prev])
+
+    updatePosts((current) => [localPost, ...current])
     setActiveCategory("הכל")
-    setPosting(false)
     setIsModalOpen(false)
+
+    try {
+      const token = await getToken()
+      if (!token) throw new Error("Missing session")
+      const savedPost = await apiRequest(token, "/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      updatePosts((current) =>
+        current.map((post) => (post._id || post.id) === localId ? savedPost : post),
+      )
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status < 500) {
+        updatePosts((current) =>
+          current.filter((post) => (post._id || post.id) !== localId),
+        )
+        alert("לא ניתן לפרסם את הפוסט")
+      } else {
+        enqueueCommunityOperation(userId, {
+          type: "create",
+          localId,
+          payload,
+        })
+      }
+    } finally {
+      setPosting(false)
+    }
   }
 
   // Post Actions
@@ -238,86 +271,89 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
   async function handleDelete(postId) {
     if (!window.confirm("האם למחוק פוסט זה?")) return
     setActiveMenuPostId(null)
-    
-    // Optimistic delete
-    setPosts(prev => {
-      const updated = prev.filter(p => (p._id || p.id) !== postId)
-      saveAllPostsToLS(updated)
-      return updated
-    })
+    const previousPosts = posts
+    updatePosts((current) =>
+      current.filter((post) => (post._id || post.id) !== postId),
+    )
+
+    if (String(postId).startsWith("local_")) {
+      discardPendingLocalPost(userId, postId)
+      return
+    }
 
     try {
       const token = await getToken()
-      await fetch(`/api/posts?id=${postId}`, {
+      if (!token) throw new Error("Missing session")
+      await apiRequest(token, "/api/posts?id=" + encodeURIComponent(postId), {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
       })
-    } catch (err) {
-      console.error("Error deleting post:", err)
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status < 500) {
+        updatePosts(previousPosts)
+        alert("לא ניתן למחוק את הפוסט")
+      } else {
+        enqueueCommunityOperation(userId, {
+          type: "delete",
+          payload: { postId },
+        })
+      }
     }
   }
 
-  function handleReport(postId) {
+  function handleReport(_postId) {
     setActiveMenuPostId(null)
     alert("הדיווח התקבל ויבדק בהקדם")
   }
 
-  // Helper: persist all posts to localStorage
-  function saveAllPostsToLS(updatedPosts) {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(updatedPosts))
-    } catch { /* ignore */ }
-  }
-
-  // Toggle like
   async function handleLike(postId) {
-    const uid = user?.id || "current_user"
+    const previousPosts = posts
+    updatePosts((current) =>
+      current.map((post) => {
+        if ((post._id || post.id) !== postId) return post
+        const liked = !post.likedByCurrentUser
+        return {
+          ...post,
+          likedByCurrentUser: liked,
+          likesCount: Math.max(0, (post.likesCount || 0) + (liked ? 1 : -1)),
+        }
+      }),
+    )
 
-    // Primary: API sync
-    try {
-      const token = await getToken()
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: "like", postId }),
-      })
-      if (res.ok) {
-        const { likes } = await res.json()
-        setPosts((prev) => {
-          const updated = prev.map((p) =>
-            (p._id || p.id) === postId ? { ...p, likes } : p
-          )
-          saveAllPostsToLS(updated)
-          return updated
-        })
-        return
-      }
-    } catch {
-      // API unreachable — proceed to local fallback
+    const payload = { action: "like", postId }
+    if (String(postId).startsWith("local_")) {
+      enqueueCommunityOperation(userId, { type: "like", payload })
+      return
     }
 
-    // Offline fallback
-    const updatedPosts = posts.map((p) => {
-      if ((p._id || p.id) !== postId) return p
-      const liked = p.likes?.includes(uid)
-      return {
-        ...p,
-        likes: liked
-          ? p.likes.filter((id) => id !== uid)
-          : [...(p.likes || []), uid],
+    try {
+      const token = await getToken()
+      if (!token) throw new Error("Missing session")
+      const result = await apiRequest(token, "/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      updatePosts((current) =>
+        current.map((post) =>
+          (post._id || post.id) === postId
+            ? { ...post, ...result }
+            : post,
+        ),
+      )
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status < 500) {
+        updatePosts(previousPosts)
+      } else {
+        enqueueCommunityOperation(userId, { type: "like", payload })
       }
-    })
-    setPosts(updatedPosts)
-    saveAllPostsToLS(updatedPosts)
+    }
   }
 
-  // Add comment
   async function handleAddComment({ postId, text, isAnonymous }) {
+    const previousPosts = posts
+    const previousCommentsPost = commentsPost
     const newComment = {
-      id: `c_${Date.now()}`,
+      id: "c_" + Date.now(),
       authorName: isAnonymous
         ? "חברה אנונימית"
         : user?.fullName || user?.firstName || "משתמשת",
@@ -325,60 +361,57 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
       text,
       createdAt: new Date().toISOString(),
     }
+    const addComment = (post) => ({
+      ...post,
+      comments: [...(post.comments || []), newComment],
+      commentsCount: (post.commentsCount || 0) + 1,
+    })
 
-    // Primary: API sync
-    try {
-      const token = await getToken()
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: "comment", postId, comment: newComment }),
-      })
-      if (res.ok) {
-        const { comments, commentsCount } = await res.json()
-        
-        setPosts((prev) => {
-          const updated = prev.map((p) =>
-            (p._id || p.id) === postId ? { ...p, comments, commentsCount } : p
-          )
-          saveAllPostsToLS(updated)
-          return updated
-        })
+    updatePosts((current) =>
+      current.map((post) =>
+        (post._id || post.id) === postId ? addComment(post) : post,
+      ),
+    )
+    setCommentsPost((current) =>
+      current && (current._id || current.id) === postId
+        ? addComment(current)
+        : current,
+    )
 
-        // Keep modal in sync
-        setCommentsPost((prev) => {
-          if (!prev || (prev._id || prev.id) !== postId) return prev
-          return { ...prev, comments, commentsCount }
-        })
-        return
-      }
-    } catch {
-      // API unreachable — proceed to local fallback
+    const payload = {
+      action: "comment",
+      postId,
+      comment: { id: newComment.id, text, isAnonymous },
+    }
+    if (String(postId).startsWith("local_")) {
+      enqueueCommunityOperation(userId, { type: "comment", payload })
+      return
     }
 
-    // Offline fallback
-    const updatedPosts = posts.map((p) => {
-      if ((p._id || p.id) !== postId) return p
-      return {
-        ...p,
-        comments: [...(p.comments || []), newComment],
-        commentsCount: (p.commentsCount || 0) + 1,
+    try {
+      const token = await getToken()
+      if (!token) throw new Error("Missing session")
+      const savedPost = await apiRequest(token, "/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      updatePosts((current) =>
+        current.map((post) =>
+          (post._id || post.id) === postId ? savedPost : post,
+        ),
+      )
+      setCommentsPost((current) =>
+        current && (current._id || current.id) === postId ? savedPost : current,
+      )
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status < 500) {
+        updatePosts(previousPosts)
+        setCommentsPost(previousCommentsPost)
+      } else {
+        enqueueCommunityOperation(userId, { type: "comment", payload })
       }
-    })
-    setPosts(updatedPosts)
-    saveAllPostsToLS(updatedPosts)
-
-    setCommentsPost((prev) => {
-      if (!prev || (prev._id || prev.id) !== postId) return prev
-      return {
-        ...prev,
-        comments: [...(prev.comments || []), newComment],
-        commentsCount: (prev.commentsCount || 0) + 1,
-      }
-    })
+    }
   }
 
   const [pullDistance, setPullDistance] = useState(0)
@@ -414,8 +447,6 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
     }
     setPullDistance(0)
   }
-
-  const clerkId = user?.id || "current_user"
 
   return (
     <div className="flex min-h-screen flex-col md:items-center">
@@ -508,7 +539,7 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
           ) : (
             posts.map((post, idx) => {
               const id = post._id || post.id
-              const liked = post.likes?.includes(clerkId)
+              const liked = Boolean(post.likedByCurrentUser)
               const colorClass =
                 AVATAR_COLORS[idx % AVATAR_COLORS.length]
               const trimName = TRIMESTER_NAMES[post.trimester] || "ראשון"
@@ -565,7 +596,7 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
                             onClick={(e) => { e.stopPropagation(); setActiveMenuPostId(null); }}
                           />
                           <div className="absolute left-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-2xl bg-white py-1 shadow-lg ring-1 ring-black/5">
-                            {post.clerkId === clerkId ? (
+                            {post.isOwner ? (
                               <>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleEditStart(post); }}
@@ -632,7 +663,7 @@ export default function CommunityScreen({ onTabChange, edd, notificationProps = 
                         {liked ? "favorite" : "favorite_border"}
                       </span>
                       <span className={`font-body-sm text-body-sm ${liked ? "text-red-400" : "text-slate-500"}`}>
-                        {post.likes?.length || 0}
+                        {post.likesCount || 0}
                       </span>
                     </button>
                     <button

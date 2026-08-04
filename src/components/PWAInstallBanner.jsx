@@ -29,8 +29,6 @@ export default function PWAInstallBanner() {
     // Detect iOS Safari
     const ua = navigator.userAgent
     const isiOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream
-    const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|Chrome/.test(ua)
-
     if (isiOS) {
       setIsIOS(true)
       setShowBanner(true)

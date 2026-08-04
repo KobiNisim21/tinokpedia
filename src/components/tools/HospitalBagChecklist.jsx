@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
+import { readStoredJson, userStorageKey, writeStoredJson } from '../../utils/storage';
 
 const DEFAULT_ITEMS = {
   forMom: {
@@ -50,34 +52,22 @@ const DEFAULT_ITEMS = {
 };
 
 export default function HospitalBagChecklist() {
+  const { user } = useUser();
   const [checkedItems, setCheckedItems] = useState(new Set());
   const [customItems, setCustomItems] = useState([]);
   const [newItemText, setNewItemText] = useState("");
   const [expandedCategory, setExpandedCategory] = useState(null);
+  const checkedStorageKey = userStorageKey(user?.id, 'hospital-bag');
+  const customStorageKey = userStorageKey(user?.id, 'hospital-bag-custom');
 
   useEffect(() => {
-    const savedChecked = localStorage.getItem('tinokpedia_hospital_bag');
-    if (savedChecked) {
-      try {
-        setCheckedItems(new Set(JSON.parse(savedChecked)));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    const savedCustom = localStorage.getItem('tinokpedia_hospital_bag_custom');
-    if (savedCustom) {
-      try {
-        setCustomItems(JSON.parse(savedCustom));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }, []);
+    setCheckedItems(new Set(readStoredJson(checkedStorageKey, [])));
+    setCustomItems(readStoredJson(customStorageKey, []));
+  }, [checkedStorageKey, customStorageKey]);
 
   const saveChecked = (newChecked) => {
     setCheckedItems(newChecked);
-    localStorage.setItem('tinokpedia_hospital_bag', JSON.stringify([...newChecked]));
+    writeStoredJson(checkedStorageKey, [...newChecked]);
   };
 
   const toggleItem = (item) => {
@@ -95,14 +85,14 @@ export default function HospitalBagChecklist() {
     if (!trimmed) return;
     const newCustomItems = [...customItems, trimmed];
     setCustomItems(newCustomItems);
-    localStorage.setItem('tinokpedia_hospital_bag_custom', JSON.stringify(newCustomItems));
+    writeStoredJson(customStorageKey, newCustomItems);
     setNewItemText("");
   };
 
   const removeCustomItem = (item) => {
     const newCustomItems = customItems.filter((ci) => ci !== item);
     setCustomItems(newCustomItems);
-    localStorage.setItem('tinokpedia_hospital_bag_custom', JSON.stringify(newCustomItems));
+    writeStoredJson(customStorageKey, newCustomItems);
     
     // Also remove from checked if it was checked
     if (checkedItems.has(item)) {

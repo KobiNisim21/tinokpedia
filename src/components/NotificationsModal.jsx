@@ -40,7 +40,7 @@ export default function NotificationsModal({
     if (isOpen && onMarkAllRead) {
       onMarkAllRead()
     }
-  }, [isOpen])
+  }, [isOpen, onMarkAllRead])
 
   if (!isOpen) return null
 

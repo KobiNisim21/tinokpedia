@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import Header from "./Header"
 import PregnancyCircleProgressBar from "./PregnancyCircleProgressBar"
 import DataBar from "./DataBar"
@@ -8,15 +9,12 @@ import { pregnancyStatus } from "../utils/pregnancy"
 import { pregnancyWeeksData } from "../data/pregnancyWeeksData"
 
 // Auto-import available weekly illustrations
-const weekImages = import.meta.glob("../assets/illustrations/**/*.{png,PNG}", {
-  eager: true,
-})
+const weekImageLoaders = import.meta.glob("../assets/illustrations/week*.webp")
 
-function getWeekImage(week) {
-  const key = Object.keys(weekImages)
-    .sort((a, b) => a.length - b.length)
-    .find((k) => k.toLowerCase().endsWith(`week${week}.png`))
-  return key ? weekImages[key].default : null
+function getWeekImageLoader(week) {
+  const key = Object.keys(weekImageLoaders)
+    .find((path) => path.toLowerCase().endsWith(`week${week}.webp`))
+  return key ? weekImageLoaders[key] : null
 }
 
 function greetingForHour(hour) {
@@ -34,8 +32,26 @@ function greetingForHour(hour) {
 export default function DashboardLayout({ name = "את", edd, onTabChange, notificationProps = {}, onOpenTimeline }) {
   const status = pregnancyStatus(edd)
   const { week, day, daysToDue, progress } = status
+  const [weekImage, setWeekImage] = useState(null)
 
-  const weekImage = getWeekImage(week)
+  useEffect(() => {
+    let active = true
+    const loadImage = getWeekImageLoader(week)
+    setWeekImage(null)
+    if (loadImage) {
+      loadImage()
+        .then((module) => {
+          if (active) setWeekImage(module.default)
+        })
+        .catch(() => {
+          if (active) setWeekImage(null)
+        })
+    }
+    return () => {
+      active = false
+    }
+  }, [week])
+
   const greeting = greetingForHour(new Date().getHours())
   
   const currentWeekData = pregnancyWeeksData[week] || pregnancyWeeksData[14]

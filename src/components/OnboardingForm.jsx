@@ -1,10 +1,9 @@
-import { useRef, useState } from "react"
-import logo from "../assets/logo.png"
+import { useState } from "react"
+import logo from "../assets/logo.webp"
 import HebrewDatePicker from "./HebrewDatePicker"
 import {
   eddFromInputs,
   parseDdMmYyyy,
-  isoToDdMmYyyy,
 } from "../utils/pregnancy"
 
 /** Format raw digits into a dd/mm/yyyy mask as the user types. */

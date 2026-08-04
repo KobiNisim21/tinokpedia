@@ -1,0 +1,22 @@
+# Rules for Tinokpedia Project
+
+## Tech Stack & Architecture
+- React 19, Vite 6, and Tailwind CSS 3 with RTL support.
+- Clerk Auth for user sessions and token generation.
+- MongoDB Atlas with Mongoose via Vercel Serverless Functions (`/api`).
+- `App.jsx` currently owns state-based navigation; do not introduce a router or global state library without a clear cross-screen need.
+
+## Coding Guidelines & Constraints
+1. **RTL First:** The app is configured with `dir="rtl"`. Design layout, logical spacing, directional icons, drawers, grids, and animations for Right-To-Left behavior. Prefer logical CSS properties when practical.
+2. **React Hooks Safety:** Call every React Hook unconditionally at the top level of the component or custom Hook. Never place Hooks after an early `return`, inside a condition, loop, callback, or nested function.
+3. **Tailwind JIT Colors:** Do not construct Tailwind class names dynamically, such as `bg-${color}-500`. Store or map complete static class names so Tailwind can detect them at build time.
+4. **Server Source of Truth:** MongoDB is the source of truth for shared and cross-device application data. Clerk metadata may provide fast profile hydration, but it must not prevent MongoDB-owned fields such as `completedTests` from loading.
+5. **Optimistic Mutations:** Use optimistic UI for post likes, comments, deletes, and test checkboxes. Keep a snapshot, persist asynchronously, and roll back or reconcile visibly when the server rejects the mutation.
+6. **Offline Mutations:** Treat `localStorage` as a versioned cache and pending-operation queue, not as an independent permanent data store. Replay queued mutations after reconnect and reconcile local IDs with server IDs without silently discarding user data.
+7. **User-Scoped Storage:** Namespace all personal `localStorage` keys by Clerk user ID and schema version. Clear or switch cached personal data when the active account changes.
+8. **Authentication & Privacy:** Authenticate every non-public API operation with Clerk. Derive `clerkId`, author identity, and other trusted identity fields on the server. Never trust client-supplied identity fields and never expose Clerk IDs or arrays of Clerk IDs in API responses.
+9. **API Validation:** Validate and normalize request bodies, query parameters, MongoDB IDs, enums, dates, and text length on the server. Return controlled 4xx errors for invalid input and avoid leaking internal errors or tokens to logs and responses.
+10. **Date Contract:** Send dates across the API as ISO 8601 strings. Convert them to valid `Date` objects at the client service boundary before storing them in React state. Keep pregnancy calculations in `src/utils/pregnancy.js`.
+11. **Mobile Viewport:** Build mobile-first and preserve the visual language in `Design.md`, including soft surfaces and `rounded-3xl` where appropriate. Verify that controls and Hebrew text fit at mobile widths without overlap.
+12. **Asset Performance:** Prefer optimized WebP, AVIF, or SVG assets. Avoid eager imports of large image collections, lazy-load non-critical media, and keep individual mobile images within a deliberate size budget.
+13. **Quality Gates:** Before completing code changes, run the production build, ESLint, and relevant automated tests. Add or update tests for authentication flows, pregnancy date calculations, API authorization, and offline reconciliation when those areas change.

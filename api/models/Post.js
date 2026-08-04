@@ -11,6 +11,7 @@ const PostSchema = new mongoose.Schema({
   likes: { type: [String], default: [] },
   comments: { type: [{
     id: String,
+    clerkId: String,
     authorName: String,
     isAnonymous: { type: Boolean, default: false },
     text: String,

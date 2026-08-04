@@ -58,7 +58,9 @@ export default function PregnancyCircleProgressBar({
               src={imageSrc}
               alt={imageAlt || `איור שבוע ${week}`}
               className="h-full w-full object-cover scale-[1.15]"
-              loading="lazy"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
             />
           ) : (
             <span className="text-7xl" role="img" aria-label="איור שבועי">

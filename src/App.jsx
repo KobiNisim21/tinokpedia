@@ -1,5 +1,5 @@
 import { useUser, useAuth } from "@clerk/clerk-react"
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import SignupScreen from "./components/SignupScreen"
 import OnboardingForm from "./components/OnboardingForm"
 import DashboardLayout from "./components/DashboardLayout"
@@ -11,6 +11,7 @@ import SideDrawer from "./components/SideDrawer"
 import PregnancyTimelineModal from "./components/PregnancyTimelineModal"
 import FoodSafetyModal from "./components/FoodSafetyModal"
 import { syncUserProfile, getUserProfile } from "./services/api"
+import { readStoredJson, userStorageKey, writeStoredJson } from "./utils/storage"
 
 /**
  * Tinokpedia — app root.
@@ -35,26 +36,29 @@ export default function App() {
   const [isTimelineOpen, setIsTimelineOpen] = useState(false)
   const [isFoodSafetyOpen, setIsFoodSafetyOpen] = useState(false)
 
-  // Notifications — persisted in localStorage
-  const NOTIF_KEY = "tinokpedia_notifications"
-  function loadNotifications() {
-    try {
-      const raw = localStorage.getItem(NOTIF_KEY)
-      return raw ? JSON.parse(raw) : []
-    } catch { return [] }
-  }
-  const [notifications, setNotifications] = useState(loadNotifications)
+  const notificationKey = userStorageKey(user?.id, "notifications")
+  const [notifications, setNotifications] = useState([])
+
+  useEffect(() => {
+    setNotifications(
+      isSignedIn ? readStoredJson(notificationKey, []) : [],
+    )
+  }, [isSignedIn, notificationKey])
 
   function addNotification(notif) {
-    const updated = [{ ...notif, id: notif.id || `n_${Date.now()}`, read: false, createdAt: notif.createdAt || new Date().toISOString() }, ...notifications]
-    setNotifications(updated)
-    try { localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)) } catch {}
+    setNotifications((previous) => {
+      const updated = [{ ...notif, id: notif.id || `n_${Date.now()}`, read: false, createdAt: notif.createdAt || new Date().toISOString() }, ...previous]
+      writeStoredJson(notificationKey, updated)
+      return updated
+    })
   }
 
-  function markAllRead() {
-    const updated = notifications.map(n => ({ ...n, read: true }))
-    setNotifications(updated)
-    try { localStorage.setItem(NOTIF_KEY, JSON.stringify(updated)) } catch {}
+  const markAllRead = useCallback(() => {
+    setNotifications((previous) => {
+      const updated = previous.map((notification) => ({ ...notification, read: true }))
+      writeStoredJson(notificationKey, updated)
+      return updated
+    })
     
     // Also mark read on backend
     if (isSignedIn) {
@@ -68,7 +72,7 @@ export default function App() {
         }
       })
     }
-  }
+  }, [getToken, isSignedIn, notificationKey])
 
   // Fetch backend notifications
   useEffect(() => {
@@ -91,7 +95,7 @@ export default function App() {
             if (newNotifs.length === 0) return prev
             
             const merged = [...newNotifs, ...prev].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            try { localStorage.setItem(NOTIF_KEY, JSON.stringify(merged)) } catch {}
+            writeStoredJson(notificationKey, merged)
             return merged
           })
         }
@@ -106,7 +110,7 @@ export default function App() {
       mounted = false
       clearInterval(interval)
     }
-  }, [isSignedIn, getToken])
+  }, [isSignedIn, getToken, notificationKey])
 
   const unreadCount = notifications.filter(n => !n.read).length
 
@@ -151,30 +155,47 @@ export default function App() {
     }
 
     async function loadProfile() {
-      try {
-        // Check Clerk unsafeMetadata first
-        const meta = user.unsafeMetadata
-        if (meta?.edd && meta?.name) {
-          setProfile({ name: meta.name, edd: new Date(meta.edd) })
-          setLoading(false)
-          return
-        }
+      const meta = user.unsafeMetadata
+      const metaEdd = meta?.edd ? new Date(meta.edd) : null
+      const metaProfile =
+        meta?.name && metaEdd && !Number.isNaN(metaEdd.getTime())
+          ? {
+              name: meta.name,
+              edd: metaEdd,
+              calculationMethod: meta.calculationMethod,
+              completedTests: [],
+            }
+          : null
 
-        // Fallback: check MongoDB
+      try {
         const token = await getToken()
         if (token) {
-          const dbProfile = await getUserProfile(token)
-          if (dbProfile?.edd && dbProfile?.name) {
-            setProfile({
-              name: dbProfile.name,
-              edd: new Date(dbProfile.edd),
+          let dbProfile = await getUserProfile(token)
+          if (!dbProfile && metaProfile) {
+            dbProfile = await syncUserProfile(token, {
+              name: metaProfile.name,
+              edd: metaProfile.edd.toISOString(),
+              calculationMethod: metaProfile.calculationMethod,
             })
+          }
+          if (dbProfile?.edd && dbProfile?.name) {
+            setProfile(dbProfile)
             setLoading(false)
             return
           }
         }
+
+        if (metaProfile) {
+          setProfile(metaProfile)
+          setLoading(false)
+          return
+        }
       } catch {
-        // Profile not found — will show onboarding
+        if (metaProfile) {
+          setProfile(metaProfile)
+          setLoading(false)
+          return
+        }
       }
       setProfile(null)
       setLoading(false)
@@ -199,7 +220,6 @@ export default function App() {
 
     const { name, edd, calculationMethod } = data
     try {
-      // Save to Clerk metadata
       await user.update({
         unsafeMetadata: {
           name,
@@ -207,22 +227,33 @@ export default function App() {
           calculationMethod,
         },
       })
+    } catch (error) {
+      console.error("Failed to save Clerk profile", error)
+      return
+    }
 
-      // Sync to MongoDB
+    const nextProfile = {
+      name,
+      edd,
+      calculationMethod,
+      completedTests: profile?.completedTests || [],
+    }
+    setProfile(nextProfile)
+
+    try {
       const token = await getToken()
       if (token) {
-        await syncUserProfile(token, {
+        const savedProfile = await syncUserProfile(token, {
           name,
           edd: edd.toISOString(),
           calculationMethod,
-          email: user.primaryEmailAddress?.emailAddress,
+          completedTests: nextProfile.completedTests,
         })
+        setProfile(savedProfile)
       }
-    } catch {
-      // Continue even if sync fails — data is in Clerk metadata
+    } catch (error) {
+      console.error("Failed to sync profile to MongoDB", error)
     }
-
-    setProfile({ name, edd })
   }
 
   // Handle onboarding completion (for Google sign-in users)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { syncUserProfile } from "../services/api"
-import { useAuth } from "@clerk/clerk-react"
+import { useAuth, useUser } from "@clerk/clerk-react"
+import { readStoredJson, userStorageKey, writeStoredJson } from "../utils/storage"
 
 const TESTS = [
   { id: "nurse_10", startWeek: 10, endWeek: 12, title: "אחות ליווי הריון", color: "text-teal-600", lineColor: "bg-teal-600", side: "right" },
@@ -21,7 +22,9 @@ const TESTS = [
 
 export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, setProfile }) {
   const { getToken } = useAuth()
+  const { user } = useUser()
   const [completed, setCompleted] = useState({})
+  const completedStorageKey = userStorageKey(user?.id, "completed-tests")
 
   // Initialize from profile / localStorage
   useEffect(() => {
@@ -31,13 +34,10 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
         profile.completedTests.forEach(t => map[t] = true)
         setCompleted(map)
       } else {
-        try {
-          const raw = localStorage.getItem("tinokpedia_tests_completed")
-          if (raw) setCompleted(JSON.parse(raw))
-        } catch {}
+        setCompleted(readStoredJson(completedStorageKey, {}))
       }
     }
-  }, [isOpen, profile])
+  }, [completedStorageKey, isOpen, profile])
 
   // Compute Pregnancy Start Date (EDD - 280 days)
   const pregnancyStart = useMemo(() => {
@@ -67,26 +67,23 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
   }
 
   const toggleTest = async (testId) => {
+    const previousCompleted = completed
     const nextCompleted = { ...completed, [testId]: !completed[testId] }
     setCompleted(nextCompleted)
-    
-    // Save to local storage
-    try {
-      localStorage.setItem("tinokpedia_tests_completed", JSON.stringify(nextCompleted))
-    } catch {}
+    writeStoredJson(completedStorageKey, nextCompleted)
 
     // Save to backend
     if (profile) {
       const arr = Object.keys(nextCompleted).filter(k => nextCompleted[k])
       try {
         const token = await getToken()
+        if (!token) throw new Error("Missing session token")
         const updated = await syncUserProfile(token, { ...profile, completedTests: arr })
-        setProfile({
-          ...updated,
-          edd: new Date(updated.edd)
-        })
+        setProfile(updated)
       } catch (err) {
         console.error("Failed to sync tests to backend", err)
+        setCompleted(previousCompleted)
+        writeStoredJson(completedStorageKey, previousCompleted)
       }
     }
   }

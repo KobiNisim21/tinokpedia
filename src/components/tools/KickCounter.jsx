@@ -1,24 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useUser } from "@clerk/clerk-react";
+import { readStoredJson, userStorageKey, writeStoredJson } from "../../utils/storage";
 
 export default function KickCounter() {
+  const { user } = useUser();
   const [counting, setCounting] = useState(false);
   const [count, setCount] = useState(0);
-  const [startTime, setStartTime] = useState(null);
+  const [_startTime, setStartTime] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [sessions, setSessions] = useState([]);
   
   const timerRef = useRef(null);
+  const sessionsStorageKey = userStorageKey(user?.id, "kick-sessions");
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("tinokpedia_kick_sessions");
-      if (saved) {
-        setSessions(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
+    setSessions(readStoredJson(sessionsStorageKey, []));
+  }, [sessionsStorageKey]);
 
   useEffect(() => {
     if (counting) {
@@ -59,11 +56,7 @@ export default function KickCounter() {
     
     const updatedSessions = [session, ...sessions];
     setSessions(updatedSessions);
-    try {
-      localStorage.setItem("tinokpedia_kick_sessions", JSON.stringify(updatedSessions));
-    } catch (e) {
-      console.error(e);
-    }
+    writeStoredJson(sessionsStorageKey, updatedSessions);
   };
 
   const handleKick = () => {

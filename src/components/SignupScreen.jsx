@@ -1,11 +1,10 @@
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useSignUp, useSignIn } from "@clerk/clerk-react"
-import logo from "../assets/logo.png"
+import logo from "../assets/logo.webp"
 import HebrewDatePicker from "./HebrewDatePicker"
 import {
   eddFromInputs,
   parseDdMmYyyy,
-  isoToDdMmYyyy,
 } from "../utils/pregnancy"
 
 /** Format raw digits into a dd/mm/yyyy mask as the user types. */
@@ -72,7 +71,6 @@ export default function SignupScreen({ onComplete }) {
   const [name, setName] = useState("")
   const [method, setMethod] = useState("last_period") // "last_period" | "due_date"
   const [dateText, setDateText] = useState("") // dd/mm/yyyy
-  const nativePickerRef = useRef(null)
 
   // Login state
   const [email, setEmail] = useState("")
@@ -89,7 +87,11 @@ export default function SignupScreen({ onComplete }) {
     method === "due_date" ? "תאריך לידה משוער" : "תאריך וסת אחרון"
 
   const parsedDate = parseDdMmYyyy(dateText)
-  const canSubmitRegister = name.trim().length > 0 && parsedDate !== null
+  const canSubmitRegister =
+    name.trim().length > 0 &&
+    parsedDate !== null &&
+    email.trim().length > 0 &&
+    password.length >= 8
   const canSubmitLogin = email.trim().length > 0 && password.trim().length > 0
 
   const googleBtnText =
@@ -132,14 +134,28 @@ export default function SignupScreen({ onComplete }) {
 
   async function handleRegisterSubmit(event) {
     event.preventDefault()
-    if (!canSubmitRegister) return
+    if (!isSignUpLoaded || !canSubmitRegister) return
 
     const edd = eddFromInputs(method, parsedDate)
-    onComplete({
-      name: name.trim(),
-      edd,
-      calculationMethod: method === "last_period" ? "LMP" : "EDD",
-    })
+    try {
+      setLoading(true)
+      setError("")
+      await signUp.create({
+        emailAddress: email.trim(),
+        password,
+        unsafeMetadata: {
+          name: name.trim(),
+          edd: edd.toISOString(),
+          calculationMethod: method === "last_period" ? "LMP" : "EDD",
+        },
+      })
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" })
+      setPendingVerification(true)
+    } catch (err) {
+      setError(err.errors?.[0]?.message || "לא ניתן להשלים את ההרשמה")
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleLoginSubmit(event) {
@@ -174,12 +190,6 @@ export default function SignupScreen({ onComplete }) {
       const result = await signUp.attemptEmailAddressVerification({ code })
       if (result.status === "complete") {
         await setSignUpActive({ session: result.createdSessionId })
-        const edd = eddFromInputs(method, parsedDate)
-        onComplete({
-          name: name.trim(),
-          edd,
-          calculationMethod: method === "last_period" ? "LMP" : "EDD",
-        })
       } else {
         setError("האימות נכשל, נסי שוב.")
       }
@@ -220,6 +230,7 @@ export default function SignupScreen({ onComplete }) {
                 <input
                   id="otpCode"
                   type="text"
+                  autoComplete="one-time-code"
                   inputMode="numeric"
                   dir="ltr"
                   value={code}
@@ -338,6 +349,7 @@ export default function SignupScreen({ onComplete }) {
                     id="userName"
                     name="userName"
                     type="text"
+                    autoComplete="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="הכניסי את שמך"
@@ -400,9 +412,8 @@ export default function SignupScreen({ onComplete }) {
               </div>
             )}
 
-            {/* ── Login Tab Content ── */}
-            {activeTab === "login" && (
-              <div className="flex flex-col gap-6 w-full">
+            {/* Email credentials are required for both registration and login. */}
+            <div className="flex flex-col gap-6 w-full">
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="email"
@@ -414,6 +425,7 @@ export default function SignupScreen({ onComplete }) {
                     id="email"
                     name="email"
                     type="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder='הכניסי כתובת דוא"ל'
@@ -431,14 +443,14 @@ export default function SignupScreen({ onComplete }) {
                     id="password"
                     name="password"
                     type="password"
+                    autoComplete={activeTab === "register" ? "new-password" : "current-password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="הכניסי סיסמה"
                     className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 font-assistant text-body-base text-on-background outline-none transition-shadow placeholder:text-outline focus:ring-2 focus:ring-primary-container"
                   />
                 </div>
-              </div>
-            )}
+            </div>
 
             {/* CTA Button */}
             <button
