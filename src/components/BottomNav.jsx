@@ -28,7 +28,7 @@ export default function BottomNav({ active = "tracking", onSelect }) {
                   : "text-on-surface-variant transition-colors hover:text-primary"
               }`}
             >
-              <span className="material-symbols-outlined">{item.icon}</span>
+              <span className="material-symbols-outlined text-[26px]">{item.icon}</span>
               <span className="mt-1 font-heebo text-label-caps">{item.label}</span>
             </button>
           )

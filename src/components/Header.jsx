@@ -14,7 +14,7 @@ export default function Header({ onNotificationsClick, onMenuClick, unreadCount 
           aria-label="התראות"
           className="relative flex items-center justify-center rounded-full p-2 text-primary transition-colors hover:bg-surface-container-low active:scale-95"
         >
-          <span className="material-symbols-outlined">notifications_none</span>
+          <span className="material-symbols-outlined text-[28px]">notifications_none</span>
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error animate-pulse">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -34,7 +34,7 @@ export default function Header({ onNotificationsClick, onMenuClick, unreadCount 
           aria-label="תפריט"
           className="flex items-center justify-center rounded-full p-2 text-primary transition-colors hover:bg-surface-container-low active:scale-95"
         >
-          <span className="material-symbols-outlined">menu</span>
+          <span className="material-symbols-outlined text-[28px]">menu</span>
         </button>
       </div>
     </header>
