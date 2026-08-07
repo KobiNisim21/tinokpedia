@@ -201,11 +201,19 @@ export default function PregnancyTimelineModal({ isOpen, onClose, edd, profile, 
           onClick={onClose}
           className="flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant hover:opacity-80 transition-opacity duration-200 p-2"
         >
-          <span className="material-symbols-outlined text-2xl">arrow_forward</span>
+          <span className="material-symbols-outlined text-2xl">close</span>
         </button>
         <h1 className="font-headline-xl text-headline-xl text-primary font-bold">לוח בדיקות הריון</h1>
         <div className="w-10" />
       </header>
+
+      {/* Usage hint */}
+      <div className="flex items-center gap-2 bg-primary-fixed/40 px-4 py-2 text-center justify-center">
+        <span className="material-symbols-outlined text-[16px] text-primary">info</span>
+        <p className="font-assistant text-[12px] text-on-primary-container font-medium">
+          ביצעת בדיקה? לחצי על הסמל הצבעוני מעל הבדיקה לסימון ✓
+        </p>
+      </div>
 
       {/* Timeline Scrollable Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-2">
