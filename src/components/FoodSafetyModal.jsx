@@ -1,6 +1,84 @@
 import { useState, useMemo } from "react"
 
 // ---------------------------------------------------------------------------
+// Inline SVG icons – independent of any icon font subset.
+// ---------------------------------------------------------------------------
+const SvgIcons = {
+  close: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  ),
+  search: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  ),
+  searchOff: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="48" height="48">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="4" y1="4" x2="18" y2="18" strokeDasharray="2 2"/>
+    </svg>
+  ),
+  // Section header icons
+  cancel: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+      <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/>
+    </svg>
+  ),
+  warning: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+      <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+    </svg>
+  ),
+  checkCircle: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+    </svg>
+  ),
+  // Food item icons
+  fish: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+      <path d="M6.5 12c3-6 10-6 14-3-4 3-11 3-14 3z"/><path d="M6.5 12c3 6 10 6 14 3"/><circle cx="18" cy="11" r="0.5" fill="currentColor"/><path d="M2 12s2-3 4.5-3M2 12s2 3 4.5 3"/>
+    </svg>
+  ),
+  wine: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+      <path d="M8 2h8l-1 7a5 5 0 01-6 0L8 2z"/><line x1="12" y1="14" x2="12" y2="20"/><line x1="8" y1="22" x2="16" y2="22"/><line x1="7" y1="2" x2="17" y2="2"/>
+    </svg>
+  ),
+  coffee: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+      <path d="M17 8h1a4 4 0 110 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
+    </svg>
+  ),
+  egg: (cls) => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+      <path d="M12 22c4.418 0 8-3.582 8-8 0-5.523-3.582-12-8-12S4 8.477 4 14c0 4.418 3.582 8 8 8z"/>
+    </svg>
+  ),
+}
+
+// Default fallback icon
+const defaultIcon = (cls) => (
+  <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+)
+
+// Map icon key → SVG renderer
+const ICON_MAP = {
+  set_meal: SvgIcons.fish,
+  liquor: SvgIcons.wine,
+  local_cafe: SvgIcons.coffee,
+  egg: SvgIcons.egg,
+}
+
+function FoodIcon({ name, className }) {
+  const renderer = ICON_MAP[name] || defaultIcon
+  return renderer(className || "")
+}
+
+// ---------------------------------------------------------------------------
 // Food safety data – placeholder items.
 // The user will provide the full dataset later to fill in all categories.
 // status: "forbidden" | "limited" | "allowed"
@@ -22,7 +100,7 @@ const CATEGORIES = ["הכל", "בשר ודגים", "גבינות", "ביצים",
 const STATUS_CONFIG = {
   forbidden: {
     title: "אסור בהחלט",
-    icon: "cancel",
+    headerIcon: SvgIcons.cancel,
     titleColor: "text-error",
     cardBg: "bg-error-container",
     iconBg: "bg-white",
@@ -32,7 +110,7 @@ const STATUS_CONFIG = {
   },
   limited: {
     title: "מומלץ להגביל",
-    icon: "warning",
+    headerIcon: SvgIcons.warning,
     titleColor: "text-secondary",
     cardBg: "bg-secondary-container",
     iconBg: "bg-white",
@@ -42,7 +120,7 @@ const STATUS_CONFIG = {
   },
   allowed: {
     title: "מותר ומומלץ",
-    icon: "check_circle",
+    headerIcon: SvgIcons.checkCircle,
     titleColor: "text-tertiary",
     cardBg: "bg-tertiary-container",
     iconBg: "bg-white",
@@ -84,7 +162,7 @@ export default function FoodSafetyModal({ isOpen, onClose }) {
           onClick={onClose}
           className="rounded-full p-2 text-primary transition-colors duration-150 ease-in-out hover:bg-surface-container-low active:scale-95"
         >
-          <span className="material-symbols-outlined">close</span>
+          {SvgIcons.close("w-6 h-6")}
         </button>
         <h1 className="font-headline-xl text-headline-xl font-bold text-on-surface">
           תזונה ובטיחות מזון
@@ -102,9 +180,9 @@ export default function FoodSafetyModal({ isOpen, onClose }) {
 
           {/* Search */}
           <div className="relative mb-2 rounded-full bg-white shadow-[0_4px_12px_0_rgba(30,41,59,0.04)]">
-            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-outline">
-              search
-            </span>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-outline">
+              {SvgIcons.search("")}
+            </div>
             <input
               type="text"
               className="w-full rounded-full border-none bg-transparent py-3 pl-4 pr-12 font-body-base text-body-base text-on-surface placeholder:text-outline focus:ring-0"
@@ -149,9 +227,9 @@ export default function FoodSafetyModal({ isOpen, onClose }) {
           {/* Empty state */}
           {filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <span className="material-symbols-outlined mb-4 text-6xl text-outline opacity-40">
-                search_off
-              </span>
+              <div className="mb-4 text-outline opacity-40">
+                {SvgIcons.searchOff("")}
+              </div>
               <p className="font-body-base text-on-surface-variant">
                 לא נמצאו תוצאות עבור &quot;{search}&quot;
               </p>
@@ -172,12 +250,7 @@ function FoodSection({ status, items }) {
   return (
     <section className="mt-4 flex flex-col gap-4">
       <h3 className={`flex items-center gap-2 font-headline-xl text-headline-xl ${cfg.titleColor}`}>
-        <span
-          className="material-symbols-outlined"
-          style={{ fontVariationSettings: "'FILL' 1" }}
-        >
-          {cfg.icon}
-        </span>
+        {cfg.headerIcon("w-6 h-6")}
         {cfg.title}
       </h3>
 
@@ -186,8 +259,8 @@ function FoodSection({ status, items }) {
           key={item.id}
           className={`flex items-start gap-4 rounded-3xl p-card-padding shadow-[0_12px_12px_0_rgba(30,41,59,0.04)] ${cfg.cardBg}`}
         >
-          <div className={`flex items-center justify-center rounded-full p-3 ${cfg.iconBg} ${cfg.iconColor}`}>
-            <span className="material-symbols-outlined">{item.icon}</span>
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm ${cfg.iconBg} ${cfg.iconColor}`}>
+            <FoodIcon name={item.icon} className="w-5 h-5" />
           </div>
           <div>
             <h4 className={`font-headline-xl text-headline-xl ${cfg.textColor}`}>
